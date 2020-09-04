@@ -1,3 +1,4 @@
+set(CMAKE_OSX_DEPLOYMENT_TARGET "10.14" CACHE STRING "Minimum OS X deployment version")
 cmake_minimum_required(VERSION 3.10)
 
 project(pinrouter)
@@ -69,8 +70,15 @@ include_directories(.)
 #target_link_libraries(pinrouter_lib PUBLIC ${LIB_LINKS})
 
 # build application
-add_executable(pinrouter main.cc ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
+add_executable(pinrouter MACOSX_BUNDLE main.cc ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
 target_link_libraries(${PROJECT_NAME} PUBLIC ${LIB_LINKS})
+set_target_properties(pinrouter PROPERTIES
+    BUNDLE True
+    MACOSX_BUNDLE_GUI_IDENTIFIER my.domain.style.identifier.pinrouter
+    MACOSX_BUNDLE_BUNDLE_NAME pinrouter
+    MACOSX_BUNDLE_BUNDLE_VERSION "0.0.1"
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "0.0.1"
+)
 #add_executable(pinrouter main.cc)
 #target_link_libraries(${PROJECT_NAME} PUBLIC pinrouter_lib)
 
@@ -86,4 +94,6 @@ add_custom_command(TARGET pinrouter_tests
     COMMAND ctest -C $<CONFIGURATION> --output-on-failure)
 
 # install the binary
-install(TARGETS pinrouter RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}")
+install(TARGETS pinrouter
+    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+    BUNDLE DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

@@ -1,0 +1,67 @@
+\documentclass[]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages                                       %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{wrapfig}
+
+\usepackage[utf8]{inputenc}
+
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage[export]{adjustbox}
+
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\usepackage[acronym]{glossaries}
+\glsdisablehyper
+
+\usepackage{pdfpages}
+\usepackage[bottom]{footmisc} % make footnotes show up below figures
+\usepackage{fancyhdr}
+
+\usepackage{amsmath}
+\usepackage{siunitx}
+\sisetup{range-phrase = \text{--}}
+
+\usepackage{subfig}
+\usepackage{graphicx}
+\graphicspath{ {./figs/} }
+
+%\usepackage[noadjust]{cite} % compact IEEE citations
+\usepackage[bibencoding=utf8,style=numeric-comp,maxnames=2,sorting=none]{biblatex}
+\addbibresource{report.bib}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Handy macros                                   %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% TODO notes
+\newcommand{\TODO}[1]{\textcolor{red}{TODO: #1}}
+
+% References to resources
+\newcommand{\fref}[1]{Fig.~#1}
+\newcommand{\tref}[1]{Table #1}
+\newcommand{\secref}[1]{Section #1}
+\newcommand{\appenref}[1]{Appendix #1}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Document properties                            %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{CPEN 513 Assignment 1 Report}
+\author{Samuel Ng}
+
+
+%\author{Quantum Silicon Inc.\thanks{Contact: Ken Gordon, Quantum Silicon Inc., Edmonton, AB, T6G 2M9, Canada (e-mail: \url{kgordon@quantumsilicon.com})}}
+\begin{document}
+
+\maketitle
+
+
+
+\end{document}

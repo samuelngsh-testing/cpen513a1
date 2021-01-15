@@ -1,0 +1,17 @@
+<RCC>
+<qresource>
+    <!--test files-->
+    <file>sample_problems/example.infile</file>
+    <file>sample_problems/impossible.infile</file>
+    <file>sample_problems/impossible2.infile</file>
+    <file>sample_problems/kuma.infile</file>
+    <file>sample_problems/misty.infile</file>
+    <file>sample_problems/oswald.infile</file>
+    <file>sample_problems/rusty.infile</file>
+    <file>sample_problems/stanley.infile</file>
+    <file>sample_problems/stdcell.infile</file>
+    <file>sample_problems/sydney.infile</file>
+    <file>sample_problems/temp.infile</file>
+    <file>sample_problems/wavy.infile</file>
+</qresource>
+</RCC>

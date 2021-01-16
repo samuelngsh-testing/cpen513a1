@@ -63,7 +63,9 @@ void Viewer::fitProblemInView()
 {
   if (curr_problem.isValid()) {
     sp::Coord dims = curr_problem.dimensions();
-    fitInView(QRectF(0, 0, dims.x*Settings::sf, dims.y*Settings::sf), Qt::KeepAspectRatio);
+    QRectF rect = QRectF(0, 0, dims.x*Settings::sf, dims.y*Settings::sf);
+    setSceneRect(rect);
+    fitInView(rect, Qt::KeepAspectRatio);
   }
 }
 

@@ -10,6 +10,7 @@
 
 #include <QObject>
 #include <QVector>
+#include <QMap>
 #include <functional>
 
 // spatial namespace
@@ -94,10 +95,13 @@ namespace sp {
     //! Copy constructor
     Cell(const Cell &other)
       : coord(other.coord), type(other.type), pin_set_id(other.pin_set_id),
-        working_val(other.working_val) {};
+        working_val(other.working_val), extra_props(other.extra_props) {};
 
     //! Empty constructor defaulting to blank cell.
     Cell() : coord(), type(BlankCell) {};
+
+    //! Destructor.
+    ~Cell() {};
 
     //! Set the coordinates of this cell.
     void setCoord(const Coord &t_coord) {coord = t_coord;}
@@ -125,8 +129,12 @@ namespace sp {
     //! Reset the working value to some default invalid value (-1).
     void resetWorkingValue() {working_val = -1;}
 
-    //! Return the misc text.
+    //! Return the working value.
     int workingValue() const {return working_val;}
+
+    //! Return a pointer to the extra_props map (intended for routing algorithms
+    //! to store extra properties.)
+    QMap<QString, QVariant> &extraProps() {return extra_props;}
 
   private:
 
@@ -135,6 +143,7 @@ namespace sp {
     CellType type;      //!< The type of this cell.
     int pin_set_id=-1;  //!< The pin set this belongs if (if it's a pin). Not a pin if -1.
     int working_val=-1; //!< Misc value intended for storing routing information.
+    QMap<QString, QVariant> extra_props;  //!< A map of extra properties.
   };
 
   //! A 2D grid containing the problem
@@ -155,6 +164,9 @@ namespace sp {
 
     //! Destructor.
     ~Grid();
+
+    //! Set all grid cells to become identical to the given grid.
+    void copyState(Grid *other);
 
     //! Set the dimensions of the grid.
     void setGridSize(int x, int y) {dim_x = x; dim_y=y;}
@@ -192,13 +204,33 @@ namespace sp {
     //! Return whether the specified coordinates are within bounds.
     bool isWithinBounds(const Coord &);
 
+    //! Return whether a route exists between the provided pins.
+    bool routeExistsBetweenPins(const Coord &a, const Coord &b);
+
+    //! Return whether all pins have been connected by RoutedCells. Checks by 
+    //! exhaustively tracing all pin combinations of each pin set.
+    bool allPinsRouted();
+
   private:
+
+    //! Clear all cells
+    void clearGrid();
+
     // Private variables
     int dim_x;          //!< x size.
     int dim_y;          //!< y size.
     QVector<QVector<Cell*>> cell_grid;  //!< Grid of cells.
+    QMap<int,PinSet> pin_sets;          //!< Keep track of pin sets.
   };
 
+  inline uint qHash(const Coord &coord, uint seed=0)
+  {
+    return ::qHash(coord.x, seed) + ::qHash(coord.y, seed);
+  }
+
 }
+
+
+Q_DECLARE_METATYPE(sp::Coord);
 
 #endif

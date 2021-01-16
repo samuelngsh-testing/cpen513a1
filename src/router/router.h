@@ -58,18 +58,29 @@ namespace rt {
     //! Destructor.
     ~Router() {};
 
+    //! Attempt to route everything. Returns whether all have been successfully
+    //! routed.
+    bool routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
+        SolveCollection *solve_col);
+
     //! Route the wire for the specified set of pins on the provided cell grid.
     //! The success state is written to the bool references.
     bool routeForId(RouteAlg alg, sp::PinSet pin_set, sp::Grid *cell_grid,
         SolveCollection *solve_col=nullptr);
 
-    //! Run the Lee Moore algorithm from the specified source to the specified
-    //! sink. If use_routed_cell_from_same_set is set to true, then existing 
-    //! routed cells that belong to the same set of pins are used.
+    //! Run the Lee Moore algorithm from the specified source to the specified 
+    //! sink. Specify the pin_set_id in case the source and/or sink are not 
+    //! pins.
     bool leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord, 
+        sp::Grid *cell_grid, SolveSteps *solve_steps=nullptr, int pin_set_id=-1);
+
+    //! Run the A* algorithm from the specified source to the specified sink.
+    bool aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
         sp::Grid *cell_grid, SolveSteps *solve_steps=nullptr);
 
   private:
+
+    void logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps);
 
     // Private variables
     Problem problem;      //!< the problem to be routed

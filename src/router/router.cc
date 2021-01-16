@@ -7,6 +7,7 @@
 
 #include <QFile>
 #include <QDir>
+#include <QQueue>
 #include <QDebug>
 #include "router.h"
 
@@ -24,6 +25,107 @@ Router::Router(const Problem &problem, const QString &cache_path)
   }
 }
 
+bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
+    SolveCollection *solve_col)
+{
+  bool all_succeeded=false;
+
+  // convenient alias for pairs of coordinates
+  using PinPair = QPair<sp::Coord, sp::Coord>;
+
+  // keep track of which pins have yet to be routed
+  QSet<sp::Coord> unrouted_pins;
+  // construct a matrix that stores the distances between pins within each pin set
+  // TODO delete this if the map version works well enough
+  // construct a QMultiMap that uses the distances between pins as keys
+  QMultiMap<int, PinPair> map_pin_sets;
+
+  // init the lists above
+  // TODO put in separate function
+  for (sp::PinSet pin_set : pin_sets) {
+    for (int i=0; i<pin_set.size(); i++) {
+      for (int j=i; j<pin_set.size(); j++) {
+        if (i==j) {
+          unrouted_pins.insert(pin_set[i]);
+        } else {
+          int md = pin_set[i].manhattanDistance(pin_set[j]);
+          map_pin_sets.insert(md, qMakePair(pin_set[i], pin_set[j]));
+        }
+      }
+    }
+  }
+
+  int attempts_left = 10;
+  bool all_done = false;
+  QQueue<PinPair> prev_failed_routes, failed_routes;
+  sp::Grid *cell_grid_cp = new sp::Grid();  // keep a copy of the cell grid
+  cell_grid_cp->copyState(cell_grid);
+  auto map_pin_sets_cp = map_pin_sets;
+  // TODO remove QQueue<PinPair> successful_routes;
+  // TODO following implementation only contains one attempt pass. Proper 
+  // implementation needs multiple passes
+  while (!all_done && attempts_left > 0 && !map_pin_sets.isEmpty()) {
+    PinPair pin_pair;
+    if (!prev_failed_routes.isEmpty()) {
+      pin_pair = prev_failed_routes.dequeue();
+    } else {
+      pin_pair = map_pin_sets.take(map_pin_sets.firstKey());
+    }
+    sp::Coord source_coord, sink_coord;
+    if (unrouted_pins.contains(pin_pair.first)) {
+      source_coord = pin_pair.first;
+      sink_coord = pin_pair.second;
+    } else if (unrouted_pins.contains(pin_pair.second)) {
+      source_coord = pin_pair.second;
+      sink_coord = pin_pair.first;
+    } else {
+      // both pins have already been routed
+      continue;
+    }
+    bool success;
+    if (cell_grid->routeExistsBetweenPins(source_coord, sink_coord)) {
+      qDebug() << tr("Has existing route between %1 and %2").arg(source_coord.str()).arg(sink_coord.str());
+      success = true;
+    } else {
+      qDebug() << tr("No existing route between %1 and %2").arg(source_coord.str()).arg(sink_coord.str());
+      success = routeForId(AStar, {pin_pair.first, pin_pair.second}, cell_grid, solve_col);
+    }
+    if (success) {
+      // TODO remove successful_routes.enqueue(pin_pair);
+    } else {
+      failed_routes.enqueue(pin_pair);
+    }
+    // TODO build in some way to consider give up conditions
+    if (map_pin_sets.isEmpty() && failed_routes.isEmpty()) {
+      all_done = true;
+      all_succeeded = true;
+    } else if (map_pin_sets.isEmpty() && !failed_routes.isEmpty()) {
+      cell_grid->copyState(cell_grid_cp);
+      map_pin_sets = map_pin_sets_cp;
+      prev_failed_routes = failed_routes;
+      failed_routes.clear();
+      attempts_left--;
+      qDebug() << tr("\nNo solution found, attempts left: %1").arg(attempts_left);
+    }
+  }
+
+  // verify that all pins have indeed been routed (sanity check)
+  if (all_succeeded) {
+    bool cell_grid_routed = cell_grid->allPinsRouted();
+    if (all_succeeded != cell_grid_routed) {
+      qWarning() << tr("Route success state differs between program and Grid's "
+          "return. Program thinks %1, Grid thinks %2.").arg(all_succeeded)
+        .arg(cell_grid_routed);
+    } else {
+      qDebug() << tr("ALL ROUTES COMPLETED SUCCESSFULLY.");
+    }
+  }
+
+  delete cell_grid_cp;
+
+  return all_succeeded;
+}
+
 bool Router::routeForId(RouteAlg alg, sp::PinSet pin_set, sp::Grid *cell_grid,
     SolveCollection *solve_col)
 {
@@ -38,9 +140,21 @@ bool Router::routeForId(RouteAlg alg, sp::PinSet pin_set, sp::Grid *cell_grid,
       if (solve_col != nullptr) {
         solve_steps = solve_col->newSolveSteps();
       }
-      sp::Coord source_coord = pin_set[pin_id];
-      sp::Coord sink_coord = pin_set[pin_id+1];
+      sp::Coord source_coord = pin_set[pin_id+1];
+      sp::Coord sink_coord = pin_set[pin_id];
       successful = leeMoore(source_coord, sink_coord, cell_grid, solve_steps);
+    }
+  } else if (alg==AStar) {
+    for (int pin_id=0; pin_id<pin_set.size()-1; pin_id++) {
+      SolveSteps *solve_steps = nullptr;
+      if (solve_col != nullptr) {
+        solve_steps = solve_col->newSolveSteps();
+      }
+      // TODO add generic pins
+      sp::Coord source_coord = pin_set[pin_id+1];
+      sp::Coord sink_coord = pin_set[pin_id];
+      qDebug() << tr("Routing from %1 to %2").arg(source_coord.str()).arg(sink_coord.str());
+      successful = aStar(source_coord, sink_coord, cell_grid, solve_steps);
     }
   }
 
@@ -48,32 +162,26 @@ bool Router::routeForId(RouteAlg alg, sp::PinSet pin_set, sp::Grid *cell_grid,
 }
 
 bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord,
-    sp::Grid *cell_grid, SolveSteps *solve_steps)
+    sp::Grid *cell_grid, SolveSteps *solve_steps, int pin_set_id)
 {
-  // lambda function that clones the provided cell_grid to the solve_steps record
-  // for later step-by-step review.
-  auto logCellGrid = [solve_steps](sp::Grid *cell_grid)
-  {
-    if (solve_steps != nullptr) {
-      solve_steps->step_grids.append(new sp::Grid(cell_grid));
-    }
-  };
-
-  // lambda function that marks all neighboring cells for a given coordinate
+  // lambda function that marks all neighboring cells of a given coordinate
   // returns a list of neighbors that were successfully marked
-  auto markNeighbors = [](sp::Coord coord, sp::Grid *cell_grid, 
+  auto markNeighbors = [](const sp::Coord &coord, sp::Grid *cell_grid, 
       int pin_set_id, bool &marked)->QList<sp::Coord>
   {
     marked=false;
     QList<sp::Coord> neighbors = cell_grid->neighborCoordsOf(coord);
+    // mark each neighbor if eligible
     for (const sp::Coord &neighbor : neighbors) {
       sp::Cell *cell = cell_grid->cellAt(neighbor);
       if (cell->workingValue() < 0 
           && (cell->getType() == sp::BlankCell
             || cell->pinSetId() == pin_set_id)) {
+        // eligible neighbor found
         cell->setWorkingValue(cell_grid->cellAt(coord)->workingValue()+1);
         marked=true;
       } else {
+        // discard ineligible neighbor
         neighbors.removeOne(neighbor);
       }
     }
@@ -83,13 +191,14 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
   // lambda function that recursively marks neighboring cells contageously from
   // the source until the specified sink is reached or until no more neighbors
   // are available for marking.
-  auto runLeeMoore = [&markNeighbors, &source_coord, &sink_coord, &cell_grid,
-       &logCellGrid]
-    (int pin_set_id)->bool
+  auto runLeeMoore = [this, &markNeighbors, &source_coord, &sink_coord, 
+       &cell_grid, solve_steps](int pin_set_id)->bool
   {
     bool marked;
+    // mark neighbors of the source
     QList<sp::Coord> neighbors = markNeighbors(source_coord, cell_grid, pin_set_id, marked);
-    logCellGrid(cell_grid);
+    logCellGrid(cell_grid, solve_steps);
+    // loop through neighbors list until sink found
     while (!neighbors.isEmpty()) {
       sp::Coord base_coord = neighbors.takeFirst();
       if (base_coord == sink_coord) {
@@ -100,17 +209,17 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
       // keep marking more neighbors
       neighbors.append(markNeighbors(base_coord, cell_grid, pin_set_id, marked));
       if (marked) {
-        logCellGrid(cell_grid);
+        logCellGrid(cell_grid, solve_steps);
       }
     }
     // reaching this point means that no solution was found
     return false;
   };
 
-  // lambda function that runs the back-propagation after cells have been
-  // marked appropriately
+  // lambda function that runs the back-propagation recursively after cells 
+  // have been marked appropriately
   std::function<void(const sp::Coord &, sp::Grid *, int)> runBackprop;
-  runBackprop = [&source_coord, &runBackprop, &logCellGrid]
+  runBackprop = [this, &source_coord, &runBackprop, solve_steps]
     (const sp::Coord &curr_coord, sp::Grid *cell_grid, int pin_set_id)
   {
     if (curr_coord == source_coord) {
@@ -126,7 +235,8 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
           // update cell type for chosen routed cells
           nc->setType(sp::RoutedCell);
           nc->setPinSetId(pin_set_id);
-          logCellGrid(cell_grid);
+          logCellGrid(cell_grid, solve_steps);
+          // recurse until source reached
           runBackprop(nc->getCoord(), cell_grid, pin_set_id);
           break;
         }
@@ -138,10 +248,25 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
   // the same pin_set_id
   sp::Cell *source_cell = cell_grid->cellAt(source_coord);
   sp::Cell *sink_cell = cell_grid->cellAt(sink_coord);
-  int pin_set_id = cell_grid->cellAt(source_coord)->pinSetId();
-  assert(source_cell->getType() == sp::PinCell);
-  assert(sink_cell->getType() == sp::PinCell);
-  assert(pin_set_id == cell_grid->cellAt(sink_coord)->pinSetId());
+  sp::CellType source_type = source_cell->getType();
+  sp::CellType sink_type = sink_cell->getType();
+  if (pin_set_id < 0) {
+    // pin set ID was not specified, assume routing between pins
+    // take ID from source/sink
+    pin_set_id = cell_grid->cellAt(source_coord)->pinSetId();
+    assert(source_type == sp::PinCell);
+    assert(sink_type == sp::PinCell);
+    assert(pin_set_id == cell_grid->cellAt(sink_coord)->pinSetId());
+  } else {
+    // pin set ID was specified, check that the ID is identical to those of the
+    // source/sink if they're pins or routed cells
+    if (source_type == sp::PinCell || source_type == sp::RoutedCell) {
+      assert(source_cell->pinSetId() == pin_set_id);
+    }
+    if (sink_type == sp::PinCell || sink_type == sp::RoutedCell) {
+      assert(sink_cell->pinSetId() == pin_set_id);
+    }
+  }
 
   // set the working value at the source pin to be 0
   source_cell->setWorkingValue(0);
@@ -160,7 +285,133 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
 
   // clear all working values
   cell_grid->clearWorkingValues();
-  logCellGrid(cell_grid);
+  logCellGrid(cell_grid, solve_steps);
 
   return success;
 }
+
+bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
+    sp::Grid *cell_grid, SolveSteps *solve_steps)
+{
+  // lambda function that marks all neighboring cells of a given coordinate by A*
+  // returns a list of neighbors that were successfully marked
+  // if a valid termination is found (whether because it's the sink or because 
+  // it's a routed cell with the same pin id), then termination is set
+  auto markNeighbors = [&source_coord, &sink_coord](const sp::Coord &coord, 
+      sp::Grid *cell_grid, int pin_set_id, bool &marked, sp::Coord &termination)
+    ->QMultiMap<QPair<int,int>,sp::Coord>
+  {
+    marked = false;
+    termination = sp::Coord();
+    QMultiMap<QPair<int,int>,sp::Coord> expl_map;
+    QList<sp::Coord> neighbors = cell_grid->neighborCoordsOf(coord);
+    // mark each neighbor if eligible
+    for (const sp::Coord &neighbor : neighbors) {
+      sp::Cell *cell = cell_grid->cellAt(neighbor);
+      if (cell->workingValue() < 0
+          && (cell->getType() == sp::BlankCell
+            || cell->pinSetId() == pin_set_id)) {
+        // eligible neighbor found
+        int d_from_source = cell_grid->cellAt(coord)->extraProps()["d_from_source"].toInt() + 1;
+        int md_sink = neighbor.manhattanDistance(sink_coord);
+        int priority = coord.manhattanDistance(source_coord);
+        int working_val = d_from_source + md_sink;
+        cell->setWorkingValue(working_val);
+        // update values in the newly traversed neighbor
+        QVariant from_coord;
+        from_coord.setValue(coord);
+        cell->extraProps()["from_coord"] = from_coord;
+        cell->extraProps()["d_from_source"] = d_from_source;
+        expl_map.insert(qMakePair(working_val, priority), neighbor);
+        // bookkeeping
+        marked = true;
+        sp::Cell *nc = cell_grid->cellAt(neighbor);
+        if (neighbor == sink_coord 
+            || (nc->getType() == sp::RoutedCell
+              && cell_grid->routeExistsBetweenPins(neighbor, sink_coord))) {
+        //if (neighbor == sink_coord) {
+          termination = neighbor;
+        }
+      }
+    }
+    return expl_map;
+  };
+
+  // lambda function that runs the A* algorithm until destination has been 
+  // reached
+  auto runAStar = [this, &markNeighbors, &source_coord, &sink_coord, cell_grid,
+       solve_steps](int pin_set_id, sp::Coord &termination)->bool
+  {
+    bool marked;
+    // keep a map of neighbors to be explored with the key being the distance
+    // from source (automatically sorted)
+    QMultiMap<QPair<int,int>,sp::Coord> expl_map;
+    // add the source coord as the first element to look at
+    int md = source_coord.manhattanDistance(sink_coord);
+    expl_map.insert(qMakePair(md,0), source_coord);
+    cell_grid->cellAt(source_coord)->extraProps()["d_from_source"] = 0;
+    cell_grid->cellAt(source_coord)->setWorkingValue(md);
+    // loop through neighbors list until sink found
+    while (!expl_map.isEmpty()) {
+      // take the coordinate with the minimum working value
+      sp::Coord coord_mwv = expl_map.take(expl_map.firstKey());
+      // insert newly found neighbors to the exploration map
+      expl_map.unite(markNeighbors(coord_mwv, cell_grid, pin_set_id, marked, termination));
+      if (marked) {
+        logCellGrid(cell_grid, solve_steps);
+      }
+      if (!termination.isBlank()) {
+        return true;
+      }
+    }
+    // reaching this point means that no solution was found
+    return false;
+  };
+
+  // lambda function that performs backtracing to create the route
+  std::function<void(const sp::Coord &, sp::Grid *, int)> backtrace;
+  backtrace = [this, &source_coord, &backtrace, solve_steps]
+    (const sp::Coord &curr_coord, sp::Grid *cell_grid, int pin_set_id)
+  {
+    if (curr_coord == source_coord) {
+      qDebug() << "Back tracing complete.";
+      return;
+    } else {
+      QVariant from_coord_v = cell_grid->cellAt(curr_coord)->extraProps()["from_coord"];
+      sp::Coord from_coord = from_coord_v.value<sp::Coord>();
+      sp::Cell *from_cell = cell_grid->cellAt(from_coord);
+      if (from_cell->getType() != sp::PinCell) {
+        from_cell->setType(sp::RoutedCell);
+        from_cell->setPinSetId(pin_set_id);
+      }
+      if (cell_grid->routeExistsBetweenPins(from_coord, source_coord)) {
+        qDebug() << "Back tracing ended early because connection already made.";
+        return;
+      }
+      logCellGrid(cell_grid, solve_steps);
+      backtrace(from_coord, cell_grid, pin_set_id);
+    }
+  };
+
+  sp::Coord termination;  // might find valid termination that's not sink
+  int pin_set_id = cell_grid->cellAt(source_coord)->pinSetId();
+  bool success = runAStar(pin_set_id, termination);
+
+  if (success) {
+    backtrace(termination, cell_grid, pin_set_id);
+  }
+
+  // clear all working values
+  cell_grid->clearWorkingValues();
+  logCellGrid(cell_grid, solve_steps);
+
+  return success;
+}
+
+void Router::logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps)
+{
+  // log the provided cell grid if both provided pointers are not nullptrs.
+  if (cell_grid != nullptr && solve_steps != nullptr) {
+    solve_steps->step_grids.append(new sp::Grid(cell_grid));
+  }
+};

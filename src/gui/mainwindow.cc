@@ -38,7 +38,10 @@ void MainWindow::resizeEvent(QResizeEvent *e)
 
 void MainWindow::readAndShowProblem(const QString &in_path)
 {
+  setWindowTitle(tr("%1 - %2").arg(QCoreApplication::applicationName())
+      .arg(QFileInfo(in_path).fileName()));
   problem = rt::Problem(in_path);
+  inspector->clearCollections();
   viewer->showProblem(problem);
   open_dir_path = QFileInfo(in_path).absolutePath();
 }
@@ -86,7 +89,9 @@ void MainWindow::initMenuBar()
   }
 
   // route menu actions
+  QAction *run_suite = new QAction(tr("Solver Suite"), this);
   QAction *lee_moore = new QAction(tr("Lee-Moore"), this);
+  QAction *a_star = new QAction(tr("A*"), this);
 
   // help menu actions
   QAction *about = new QAction(tr("&About"));
@@ -108,6 +113,19 @@ void MainWindow::initMenuBar()
         }
       });
   connect(quit, &QAction::triggered, this, &QWidget::close);
+  // TODO clean up lee more and a star invocation signals
+  connect(run_suite, &QAction::triggered,
+      [this]()
+      {
+        inspector->clearCollections();
+        if (problem.isValid()) {
+          rt::Problem problem_cp(problem);
+          rt::Router router(problem_cp, "/tmp/router");
+          router.routeSuite(problem_cp.pinSets(), problem_cp.cellGrid(),
+              inspector->solveCollection());
+          inspector->updateCollections();
+        }
+      });
   connect(lee_moore, &QAction::triggered,
       [this]()
       {
@@ -121,12 +139,28 @@ void MainWindow::initMenuBar()
           inspector->updateCollections();
         }
       });
+  connect(a_star, &QAction::triggered,
+      [this]()
+      {
+        // TODO make generic, current implementation is hard-coded test
+        inspector->clearCollections();
+        if (problem.isValid()) {
+          rt::Problem problem_cp(problem);
+          rt::Router router(problem_cp, "/tmp/router");
+          router.routeForId(rt::Router::AStar, problem_cp.pinSets()[0], 
+              problem_cp.cellGrid(), inspector->solveCollection());
+          inspector->updateCollections();
+        }
+      });
   connect(about, &QAction::triggered, this, &MainWindow::aboutDialog);
 
   // add actions to the appropriate menus
   file->addAction(open_problem);
   file->addMenu(open_sample_problem);
+  file->addSeparator();
   file->addAction(quit);
+  route->addAction(run_suite);
   route->addAction(lee_moore);
+  route->addAction(a_star);
   help->addAction(about);
 }

@@ -19,14 +19,15 @@ RouteInspector::RouteInspector(Viewer *viewer, QWidget *parent)
 
 RouteInspector::~RouteInspector()
 {
-  clearCollections();
+  clearCollections(false);
 }
 
-void RouteInspector::clearCollections()
+void RouteInspector::clearCollections(bool update_viewer)
 {
   solve_col.clear();
   updateCollections();
-  viewer->updateCellGrid();
+  if (update_viewer)
+    viewer->updateCellGrid();
 }
 
 void RouteInspector::updateCollections()
@@ -75,7 +76,6 @@ void RouteInspector::initInspector()
 
   // init layout
   QVBoxLayout *vl_insp = new QVBoxLayout();
-  vl_insp->addWidget(new QLabel("Collection:"));
   QHBoxLayout *hl_col = new QHBoxLayout();
   hl_col->addWidget(pb_col_p);
   hl_col->addWidget(s_collection);
@@ -83,7 +83,6 @@ void RouteInspector::initInspector()
   g_collection->setLayout(hl_col);
   vl_insp->addWidget(g_collection);
 
-  vl_insp->addWidget(new QLabel("Step:"));
   QHBoxLayout *hl_step = new QHBoxLayout();
   hl_step->addWidget(pb_step_p);
   hl_step->addWidget(s_step);

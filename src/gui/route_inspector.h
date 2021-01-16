@@ -32,7 +32,7 @@ namespace gui {
     rt::SolveCollection *solveCollection() {return &solve_col;}
 
     //! Clear the existing collection.
-    void clearCollections();
+    void clearCollections(bool update_viewer=true);
 
     //! Update the inspector GUI, needs to called for the GUI elements to update
     //! in response to changes in the SolveCollection.

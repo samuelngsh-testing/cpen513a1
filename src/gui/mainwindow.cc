@@ -118,9 +118,11 @@ void MainWindow::initMenuBar()
       [this]()
       {
         inspector->clearCollections();
+        rt::RouterSettings settings;
+        settings.detail_level = rt::LogCoarseIntermediate;
         if (problem.isValid()) {
           rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router");
+          rt::Router router(problem_cp, "/tmp/router", settings);
           router.routeSuite(problem_cp.pinSets(), problem_cp.cellGrid(),
               inspector->solveCollection());
           inspector->updateCollections();
@@ -131,9 +133,11 @@ void MainWindow::initMenuBar()
       {
         // TODO make generic, current implementation is hard-coded test
         inspector->clearCollections();
+        rt::RouterSettings settings;
+        settings.detail_level = rt::LogCoarseIntermediate;
         if (problem.isValid()) {
           rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router");
+          rt::Router router(problem_cp, "/tmp/router", settings);
           router.routeForId(rt::Router::LeeMoore, problem_cp.pinSets()[0], 
               problem_cp.cellGrid(), inspector->solveCollection());
           inspector->updateCollections();
@@ -144,9 +148,11 @@ void MainWindow::initMenuBar()
       {
         // TODO make generic, current implementation is hard-coded test
         inspector->clearCollections();
+        rt::RouterSettings settings;
+        settings.detail_level = rt::LogCoarseIntermediate;
         if (problem.isValid()) {
           rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router");
+          rt::Router router(problem_cp, "/tmp/router", settings);
           router.routeForId(rt::Router::AStar, problem_cp.pinSets()[0], 
               problem_cp.cellGrid(), inspector->solveCollection());
           inspector->updateCollections();

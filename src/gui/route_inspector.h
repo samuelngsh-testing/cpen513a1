@@ -41,6 +41,9 @@ namespace gui {
     //! Show the specified solve collection and step. Provide -1 for the last step.
     void showSolveStep(int collection, int step);
 
+    //! Overloaded version that reads collection and step from GUI.
+    void showSolveStep();
+
   private:
 
     //! Initialize the Inspector GUI.

@@ -29,6 +29,7 @@ namespace rt {
   //! Store information on a collection of solve attempts.
   struct SolveCollection
   {
+
     //! Clear the collection
     void clear() {desc = ""; solve_steps.clear();}
 
@@ -46,6 +47,15 @@ namespace rt {
     QList<SolveSteps> solve_steps;  //!< A list of solve steps.
   };
 
+  //! Solve step storage detail level
+  enum LogVerbosity{LogAllIntermediate, LogCoarseIntermediate, LogResultsOnly};
+
+  //! Store router settings
+  struct RouterSettings
+  {
+    LogVerbosity detail_level;
+  };
+
   class Router : public QObject
   {
   public:
@@ -53,7 +63,8 @@ namespace rt {
     enum RouteAlg{LeeMoore, AStar};
 
     //! Constructor for the Router class taking the problem class and cache path.
-    Router(const Problem &problem, const QString &cache_path);
+    Router(const Problem &problem, const QString &cache_path, 
+        RouterSettings settings);
 
     //! Destructor.
     ~Router() {};
@@ -80,11 +91,15 @@ namespace rt {
 
   private:
 
-    void logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps);
+    //! Log the cell grid if the provided detail level >= that indicated in 
+    //! the settings.
+    void logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps,
+        LogVerbosity detail);
 
     // Private variables
-    Problem problem;      //!< the problem to be routed
-    QString cache_path;   //!< path to the cache directory
+    Problem problem;          //!< the problem to be routed
+    QString cache_path;       //!< path to the cache directory
+    RouterSettings settings;  //!< router settings
 
   };
 

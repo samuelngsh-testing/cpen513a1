@@ -14,8 +14,9 @@
 using namespace rt;
 
 // Constructor
-Router::Router(const Problem &problem, const QString &cache_path)
-  : problem(problem)
+Router::Router(const Problem &problem, const QString &cache_path, 
+    RouterSettings settings)
+  : problem(problem), settings(settings)
 {
   // attempt to create the cache path
   QDir cache_dir(cache_path);
@@ -57,7 +58,9 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
 
   int attempts_left = 10;
   bool all_done = false;
-  QQueue<PinPair> prev_failed_routes, failed_routes;
+  QQueue<PinPair> priority_routes;
+  QSet<sp::Coord> failed_pins;
+  QList<PinPair> difficult_pairs;
   sp::Grid *cell_grid_cp = new sp::Grid();  // keep a copy of the cell grid
   cell_grid_cp->copyState(cell_grid);
   auto map_pin_sets_cp = map_pin_sets;
@@ -66,8 +69,8 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
   // implementation needs multiple passes
   while (!all_done && attempts_left > 0 && !map_pin_sets.isEmpty()) {
     PinPair pin_pair;
-    if (!prev_failed_routes.isEmpty()) {
-      pin_pair = prev_failed_routes.dequeue();
+    if (!priority_routes.isEmpty()) {
+      pin_pair = priority_routes.dequeue();
     } else {
       pin_pair = map_pin_sets.take(map_pin_sets.firstKey());
     }
@@ -90,20 +93,27 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
       qDebug() << tr("No existing route between %1 and %2").arg(source_coord.str()).arg(sink_coord.str());
       success = routeForId(AStar, {pin_pair.first, pin_pair.second}, cell_grid, solve_col);
     }
-    if (success) {
-      // TODO remove successful_routes.enqueue(pin_pair);
-    } else {
-      failed_routes.enqueue(pin_pair);
+    if (!success) {
+      if (!failed_pins.contains(source_coord) && !failed_pins.contains(sink_coord)) {
+        if (!difficult_pairs.contains(pin_pair)) {
+          // every time a new failure emerges, put them as top priority for the next round
+          difficult_pairs.prepend(pin_pair);
+        }
+        failed_pins.insert(source_coord);
+        failed_pins.insert(sink_coord);
+      }
     }
     // TODO build in some way to consider give up conditions
-    if (map_pin_sets.isEmpty() && failed_routes.isEmpty()) {
+    if (map_pin_sets.isEmpty() && failed_pins.isEmpty()) {
       all_done = true;
       all_succeeded = true;
-    } else if (map_pin_sets.isEmpty() && !failed_routes.isEmpty()) {
+    } else if (map_pin_sets.isEmpty() && !failed_pins.isEmpty()) {
+      for (auto difficult_pair : difficult_pairs) {
+        priority_routes.enqueue(difficult_pair);
+      }
       cell_grid->copyState(cell_grid_cp);
       map_pin_sets = map_pin_sets_cp;
-      prev_failed_routes = failed_routes;
-      failed_routes.clear();
+      failed_pins.clear();
       attempts_left--;
       qDebug() << tr("\nNo solution found, attempts left: %1").arg(attempts_left);
     }
@@ -197,7 +207,7 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
     bool marked;
     // mark neighbors of the source
     QList<sp::Coord> neighbors = markNeighbors(source_coord, cell_grid, pin_set_id, marked);
-    logCellGrid(cell_grid, solve_steps);
+    logCellGrid(cell_grid, solve_steps, LogAllIntermediate);
     // loop through neighbors list until sink found
     while (!neighbors.isEmpty()) {
       sp::Coord base_coord = neighbors.takeFirst();
@@ -209,7 +219,7 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
       // keep marking more neighbors
       neighbors.append(markNeighbors(base_coord, cell_grid, pin_set_id, marked));
       if (marked) {
-        logCellGrid(cell_grid, solve_steps);
+        logCellGrid(cell_grid, solve_steps, LogAllIntermediate);
       }
     }
     // reaching this point means that no solution was found
@@ -235,7 +245,7 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
           // update cell type for chosen routed cells
           nc->setType(sp::RoutedCell);
           nc->setPinSetId(pin_set_id);
-          logCellGrid(cell_grid, solve_steps);
+          logCellGrid(cell_grid, solve_steps, LogAllIntermediate);
           // recurse until source reached
           runBackprop(nc->getCoord(), cell_grid, pin_set_id);
           break;
@@ -282,10 +292,11 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
   } else {
     qDebug() << tr("Failed to run Lee-Moore on pin set %1").arg(pin_set_id);
   }
+  logCellGrid(cell_grid, solve_steps, LogCoarseIntermediate);
 
   // clear all working values
   cell_grid->clearWorkingValues();
-  logCellGrid(cell_grid, solve_steps);
+  logCellGrid(cell_grid, solve_steps, LogResultsOnly);
 
   return success;
 }
@@ -358,7 +369,7 @@ bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
       // insert newly found neighbors to the exploration map
       expl_map.unite(markNeighbors(coord_mwv, cell_grid, pin_set_id, marked, termination));
       if (marked) {
-        logCellGrid(cell_grid, solve_steps);
+        logCellGrid(cell_grid, solve_steps, LogAllIntermediate);
       }
       if (!termination.isBlank()) {
         return true;
@@ -388,7 +399,7 @@ bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
         qDebug() << "Back tracing ended early because connection already made.";
         return;
       }
-      logCellGrid(cell_grid, solve_steps);
+      logCellGrid(cell_grid, solve_steps, LogAllIntermediate);
       backtrace(from_coord, cell_grid, pin_set_id);
     }
   };
@@ -400,16 +411,21 @@ bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
   if (success) {
     backtrace(termination, cell_grid, pin_set_id);
   }
+  logCellGrid(cell_grid, solve_steps, LogCoarseIntermediate);
 
   // clear all working values
   cell_grid->clearWorkingValues();
-  logCellGrid(cell_grid, solve_steps);
+  logCellGrid(cell_grid, solve_steps, LogResultsOnly);
 
   return success;
 }
 
-void Router::logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps)
+void Router::logCellGrid(sp::Grid *cell_grid, SolveSteps *solve_steps, 
+    LogVerbosity detail)
 {
+  if (detail < settings.detail_level) {
+    return;
+  }
   // log the provided cell grid if both provided pointers are not nullptrs.
   if (cell_grid != nullptr && solve_steps != nullptr) {
     solve_steps->step_grids.append(new sp::Grid(cell_grid));

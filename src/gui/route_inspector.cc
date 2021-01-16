@@ -58,6 +58,13 @@ void RouteInspector::showSolveStep(int col, int step)
   viewer->updateCellGrid(solve_col[col][step]);
 }
 
+void RouteInspector::showSolveStep()
+{
+  if (g_collection->isEnabled() && g_step->isEnabled()) {
+    showSolveStep(s_collection->value(), s_step->value());
+  }
+}
+
 void RouteInspector::initInspector()
 {
   // init sliders and helper arrow buttons
@@ -103,12 +110,7 @@ void RouteInspector::initInspector()
   connect(s_collection, &QAbstractSlider::valueChanged,
       this, &RouteInspector::updateSteps);
   connect(s_step, &QAbstractSlider::valueChanged,
-      [this]()
-      {
-        if (g_collection->isEnabled() && g_step->isEnabled()) {
-          showSolveStep(s_collection->value(), s_step->value());
-        }
-      });
+      [this](){showSolveStep();});
   connect(pb_col_p, &QAbstractButton::released,
       [this, moveSlider](){moveSlider(s_collection, -1);});
   connect(pb_col_n, &QAbstractButton::released,
@@ -123,6 +125,7 @@ void RouteInspector::initInspector()
 void RouteInspector::updateSteps()
 {
   int curr_col = s_collection->value();
+  int orig_val = s_step->value();
   if (!g_collection->isEnabled() || solve_col[curr_col].step_grids.size() == 0) {
     g_step->setEnabled(false);
     s_step->setValue(0);
@@ -133,4 +136,9 @@ void RouteInspector::updateSteps()
   g_step->setEnabled(true);
   s_step->setRange(0, last_step);
   s_step->setValue(last_step);
+  if (orig_val == s_step->value()) {
+    // if the value of the slider didn't change, then manually force the new
+    // solve step to be shown
+    showSolveStep();
+  }
 }

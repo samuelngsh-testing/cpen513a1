@@ -119,7 +119,7 @@ void MainWindow::initMenuBar()
       {
         inspector->clearCollections();
         rt::RouterSettings settings;
-        settings.detail_level = rt::LogCoarseIntermediate;
+        settings.detail_level = rt::LogAllIntermediate;
         if (problem.isValid()) {
           rt::Problem problem_cp(problem);
           rt::Router router(problem_cp, "/tmp/router", settings);

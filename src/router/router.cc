@@ -56,11 +56,13 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
     }
   }
 
-  int attempts_left = 10;
+  int attempts_left = 20;
+  int difficult_boost_thresh = 2; // boost the order of the difficult pin after failing this many times
   bool all_done = false;
   QQueue<PinPair> priority_routes;
   QSet<sp::Coord> failed_pins;
   QList<PinPair> difficult_pairs;
+  QMap<PinPair, int> difficult_pair_failure_count;
   sp::Grid *cell_grid_cp = new sp::Grid();  // keep a copy of the cell grid
   cell_grid_cp->copyState(cell_grid);
   auto map_pin_sets_cp = map_pin_sets;
@@ -95,9 +97,14 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
     }
     if (!success) {
       if (!failed_pins.contains(source_coord) && !failed_pins.contains(sink_coord)) {
+        difficult_pair_failure_count[pin_pair] += 1;
         if (!difficult_pairs.contains(pin_pair)) {
           // every time a new failure emerges, put them as top priority for the next round
           difficult_pairs.prepend(pin_pair);
+        } else if (difficult_pair_failure_count[pin_pair] > difficult_boost_thresh) {
+          difficult_pairs.removeOne(pin_pair);
+          difficult_pairs.prepend(pin_pair);
+          difficult_pair_failure_count[pin_pair] = 0;
         }
         failed_pins.insert(source_coord);
         failed_pins.insert(sink_coord);
@@ -264,8 +271,8 @@ bool Router::leeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord
     // pin set ID was not specified, assume routing between pins
     // take ID from source/sink
     pin_set_id = cell_grid->cellAt(source_coord)->pinSetId();
-    assert(source_type == sp::PinCell);
-    assert(sink_type == sp::PinCell);
+    //assert(source_type == sp::PinCell);
+    //assert(sink_type == sp::PinCell);
     assert(pin_set_id == cell_grid->cellAt(sink_coord)->pinSetId());
   } else {
     // pin set ID was specified, check that the ID is identical to those of the
@@ -318,30 +325,40 @@ bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
     QList<sp::Coord> neighbors = cell_grid->neighborCoordsOf(coord);
     // mark each neighbor if eligible
     for (const sp::Coord &neighbor : neighbors) {
-      sp::Cell *cell = cell_grid->cellAt(neighbor);
-      if (cell->workingValue() < 0
-          && (cell->getType() == sp::BlankCell
-            || cell->pinSetId() == pin_set_id)) {
+      sp::Cell *nc = cell_grid->cellAt(neighbor);
+      if (nc->getType() == sp::BlankCell || nc->pinSetId() == pin_set_id) {
         // eligible neighbor found
-        int d_from_source = cell_grid->cellAt(coord)->extraProps()["d_from_source"].toInt() + 1;
-        int md_sink = neighbor.manhattanDistance(sink_coord);
-        int priority = coord.manhattanDistance(source_coord);
+        int d_from_source = cell_grid->cellAt(coord)->extraProps()["d_from_source"].toInt();
+        if (nc->getType() == sp::RoutedCell && nc->pinSetId() == pin_set_id) {
+          d_from_source += 40;
+        } else {
+          d_from_source += 100;
+        }
+        int md_sink = 100*neighbor.manhattanDistance(sink_coord);
+        int priority = coord.manhattanDistance(sink_coord);
         int working_val = d_from_source + md_sink;
-        cell->setWorkingValue(working_val);
-        // update values in the newly traversed neighbor
-        QVariant from_coord;
-        from_coord.setValue(coord);
-        cell->extraProps()["from_coord"] = from_coord;
-        cell->extraProps()["d_from_source"] = d_from_source;
-        expl_map.insert(qMakePair(working_val, priority), neighbor);
-        // bookkeeping
-        marked = true;
-        sp::Cell *nc = cell_grid->cellAt(neighbor);
-        if (neighbor == sink_coord 
-            || (nc->getType() == sp::RoutedCell
-              && cell_grid->routeExistsBetweenPins(neighbor, sink_coord))) {
-        //if (neighbor == sink_coord) {
-          termination = neighbor;
+        if (nc->workingValue() < 0 || nc->workingValue() > working_val) {
+          nc->setWorkingValue(working_val);
+          // update values in the newly traversed neighbor
+          QVariant from_coord_v;
+          from_coord_v.setValue(coord);
+          QVariant source_coord_v, sink_coord_v;
+          source_coord_v.setValue(source_coord);
+          sink_coord_v.setValue(sink_coord);
+          nc->extraProps()["from_coord"] = from_coord_v;
+          nc->extraProps()["d_from_source"] = d_from_source;
+          nc->extraProps()["source_coord"] = source_coord_v;
+          nc->extraProps()["sink_coord"] = sink_coord_v;
+          expl_map.insert(qMakePair(working_val, priority), neighbor);
+          // bookkeeping
+          marked = true;
+          sp::Cell *nc = cell_grid->cellAt(neighbor);
+          if (neighbor == sink_coord 
+              || (nc->getType() == sp::RoutedCell
+                && cell_grid->routeExistsBetweenPins(neighbor, sink_coord))) {
+          //if (neighbor == sink_coord) {
+            termination = neighbor;
+          }
         }
       }
     }
@@ -361,7 +378,7 @@ bool Router::aStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
     int md = source_coord.manhattanDistance(sink_coord);
     expl_map.insert(qMakePair(md,0), source_coord);
     cell_grid->cellAt(source_coord)->extraProps()["d_from_source"] = 0;
-    cell_grid->cellAt(source_coord)->setWorkingValue(md);
+    cell_grid->cellAt(source_coord)->setWorkingValue(md*100);
     // loop through neighbors list until sink found
     while (!expl_map.isEmpty()) {
       // take the coordinate with the minimum working value

@@ -28,6 +28,8 @@ private slots:
     // TODO check all contents of pinSetIdMap
   }
 
+  // TODO test that color generator doesn't crash with the inclusion of more colors (than the default thresholds)
+
 };
 
 QTEST_MAIN(RouterTests)

@@ -139,10 +139,10 @@ namespace sp {
   private:
 
     // Private variables
-    Coord coord;        //!< Coordinates of this cell.
-    CellType type;      //!< The type of this cell.
-    int pin_set_id=-1;  //!< The pin set this belongs if (if it's a pin). Not a pin if -1.
-    int working_val=-1; //!< Misc value intended for storing routing information.
+    Coord coord;          //!< Coordinates of this cell.
+    CellType type;        //!< The type of this cell.
+    int pin_set_id=-1;    //!< The pin set this belongs if (if it's a pin). Not a pin if -1.
+    int working_val=-1;   //!< Misc value intended for storing routing information.
     QMap<QString, QVariant> extra_props;  //!< A map of extra properties.
   };
 
@@ -210,6 +210,7 @@ namespace sp {
     //! Return whether all pins have been connected by RoutedCells. Checks by 
     //! exhaustively tracing all pin combinations of each pin set.
     bool allPinsRouted();
+
 
   private:
 

@@ -101,7 +101,7 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
         if (!difficult_pairs.contains(pin_pair)) {
           // every time a new failure emerges, put them as top priority for the next round
           difficult_pairs.prepend(pin_pair);
-        } else if (difficult_pair_failure_count[pin_pair] > difficult_boost_thresh) {
+        } else if (difficult_pair_failure_count[pin_pair] == difficult_boost_thresh) {
           difficult_pairs.removeOne(pin_pair);
           difficult_pairs.prepend(pin_pair);
           difficult_pair_failure_count[pin_pair] = 0;

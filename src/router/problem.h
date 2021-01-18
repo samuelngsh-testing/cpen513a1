@@ -55,7 +55,7 @@ namespace rt {
     sp::Grid *cellGrid() {return &cell_grid;}
 
     //! Return a list of pin sets.
-    QList<sp::PinSet> pinSets() {return pin_sets;}
+    QList<sp::PinSet> pinSets() const {return pin_sets;}
 
     // TODO remove:
     //! Return a constant reference to the cell map.

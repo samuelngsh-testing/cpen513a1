@@ -13,13 +13,20 @@
 
 namespace settings {
 
+  //! Class containing handy settings.
   class Settings
   {
   public:
 
+    //! Graphics viewer scaling factor (how many pixels per grid cell).
     static qreal sf;
 
-    static QList<QColor> pin_colors;
+    //! Return a color that generated as suitable for the provided index and 
+    //! max possible index.
+    static QColor colorGenerator(int ind, int max_ind);
+
+    //! Generated colors.
+    static QList<QColor> gcols;
 
   };
 

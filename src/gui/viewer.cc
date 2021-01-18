@@ -27,6 +27,7 @@ void Viewer::showProblem(const rt::Problem &problem)
 {
   clearProblem();
   curr_problem = problem;
+  Cell::num_pin_sets = problem.pinSets().size();
 
   // create a graphical cell at every part of the grid
   sp::Coord dims = curr_problem.dimensions();

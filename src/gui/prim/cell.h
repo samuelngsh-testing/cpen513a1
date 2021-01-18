@@ -51,6 +51,9 @@ namespace gui {
     //! Overriden method to paint this cell on scene.
     virtual void paint(QPainter *, const QStyleOptionGraphicsItem *, QWidget *) override;
 
+    //! Static number of sets of pins of the problem currently displayed.
+    static int num_pin_sets;
+
   private:
 
     //! Update the cell's graphical location

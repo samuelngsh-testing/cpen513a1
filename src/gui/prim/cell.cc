@@ -10,6 +10,8 @@
 using namespace gui;
 using namespace settings;
 
+int Cell::num_pin_sets = -1;
+
 Cell::Cell(sp::Cell *raw_cell)
 {
   updateCell(raw_cell);
@@ -47,7 +49,7 @@ void Cell::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
   switch(type) {
     case sp::PinCell:
     case sp::RoutedCell:
-      col = Settings::pin_colors[pin_set_id];
+      col = Settings::colorGenerator(pin_set_id, num_pin_sets-1);
       break;
     case sp::ObsCell:
       col = QColor("#0000FF");

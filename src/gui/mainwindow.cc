@@ -43,6 +43,7 @@ void MainWindow::readAndShowProblem(const QString &in_path)
   problem = rt::Problem(in_path);
   inspector->clearCollections();
   viewer->showProblem(problem);
+  invoker->setProblem(problem);
   open_dir_path = QFileInfo(in_path).absolutePath();
 }
 
@@ -52,10 +53,15 @@ void MainWindow::initGui()
 
   viewer = new gui::Viewer();
   inspector = new gui::RouteInspector(viewer);
+  invoker = new gui::Invoker(viewer, inspector);
+
+  QHBoxLayout *hbl = new QHBoxLayout(); // horizontal bottom layout
+  hbl->addWidget(invoker);
+  hbl->addWidget(inspector);
 
   QVBoxLayout *vbl = new QVBoxLayout(); // main vertical layout
   vbl->addWidget(viewer);
-  vbl->addWidget(inspector);
+  vbl->addLayout(hbl);
 
   QWidget *w_main = new QWidget(this);  // main widget that holds everything
   w_main->setLayout(vbl);
@@ -66,7 +72,6 @@ void MainWindow::initMenuBar()
 {
   // initialize menus
   QMenu *file = menuBar()->addMenu(tr("&File"));
-  QMenu *route = menuBar()->addMenu(tr("&Route"));
   QMenu *help = menuBar()->addMenu(tr("&Help"));
 
   // file menu actions
@@ -88,11 +93,6 @@ void MainWindow::initMenuBar()
         });
   }
 
-  // route menu actions
-  QAction *run_suite = new QAction(tr("Solver Suite"), this);
-  QAction *lee_moore = new QAction(tr("Lee-Moore"), this);
-  QAction *a_star = new QAction(tr("A*"), this);
-
   // help menu actions
   QAction *about = new QAction(tr("&About"));
 
@@ -113,51 +113,6 @@ void MainWindow::initMenuBar()
         }
       });
   connect(quit, &QAction::triggered, this, &QWidget::close);
-  // TODO clean up lee more and a star invocation signals
-  connect(run_suite, &QAction::triggered,
-      [this]()
-      {
-        inspector->clearCollections();
-        rt::RouterSettings settings;
-        settings.detail_level = rt::LogCoarseIntermediate;
-        if (problem.isValid()) {
-          rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router", settings);
-          router.routeSuite(problem_cp.pinSets(), problem_cp.cellGrid(),
-              inspector->solveCollection());
-          inspector->updateCollections();
-        }
-      });
-  connect(lee_moore, &QAction::triggered,
-      [this]()
-      {
-        // TODO make generic, current implementation is hard-coded test
-        inspector->clearCollections();
-        rt::RouterSettings settings;
-        settings.detail_level = rt::LogCoarseIntermediate;
-        if (problem.isValid()) {
-          rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router", settings);
-          router.routeForId(rt::Router::LeeMoore, problem_cp.pinSets()[0], 
-              problem_cp.cellGrid(), inspector->solveCollection());
-          inspector->updateCollections();
-        }
-      });
-  connect(a_star, &QAction::triggered,
-      [this]()
-      {
-        // TODO make generic, current implementation is hard-coded test
-        inspector->clearCollections();
-        rt::RouterSettings settings;
-        settings.detail_level = rt::LogCoarseIntermediate;
-        if (problem.isValid()) {
-          rt::Problem problem_cp(problem);
-          rt::Router router(problem_cp, "/tmp/router", settings);
-          router.routeForId(rt::Router::AStar, problem_cp.pinSets()[0], 
-              problem_cp.cellGrid(), inspector->solveCollection());
-          inspector->updateCollections();
-        }
-      });
   connect(about, &QAction::triggered, this, &MainWindow::aboutDialog);
 
   // add actions to the appropriate menus
@@ -165,8 +120,5 @@ void MainWindow::initMenuBar()
   file->addMenu(open_sample_problem);
   file->addSeparator();
   file->addAction(quit);
-  route->addAction(run_suite);
-  route->addAction(lee_moore);
-  route->addAction(a_star);
   help->addAction(about);
 }

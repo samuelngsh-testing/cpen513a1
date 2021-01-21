@@ -73,7 +73,7 @@ bool Problem::readProblem(const QString &in_path)
   // parse the file
   QTextStream out(&in_file);
   int remaining_o_cells=-1;
-  int remaining_sinks=-1;
+  int remaining_pins=-1;
   ReadPhase phase = GridSize;
   while (!in_file.atEnd()) {
     QString line = in_file.readLine().trimmed();
@@ -94,7 +94,11 @@ bool Problem::readProblem(const QString &in_path)
       case ObsCellCount:
         {
           remaining_o_cells = line.toInt();
-          phase = ObsCells;       // proceed to next phase
+          if (remaining_o_cells != 0) {
+            phase = ObsCells;       // proceed to next phase
+          } else {
+            phase = PinCount;       // skip to pin count phase if no obs cells
+          }
           break;
         }
       // read obstruction cells
@@ -111,14 +115,18 @@ bool Problem::readProblem(const QString &in_path)
           
           // bookkeeping
           if (--remaining_o_cells == 0) {
-            phase = PinCount;  // proceed to next phase
+            phase = PinCount;   // proceed to next phase
           }
           break;
         }
       case PinCount:
         {
-          remaining_sinks = line.toInt();
-          phase = Pins;        // proceed to next phase
+          remaining_pins = line.toInt();
+          if (remaining_pins != 0) {
+            phase = Pins;       // proceed to next phase
+          } else {
+            phase = Finished;   // done if no pins to read
+          }
           break;
         }
       case Pins:
@@ -132,7 +140,7 @@ bool Problem::readProblem(const QString &in_path)
           }
 
           // bookkeeping
-          if (--remaining_sinks == 0) {
+          if (--remaining_pins == 0) {
             phase = Finished;
           }
           break;

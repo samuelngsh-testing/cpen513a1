@@ -1,6 +1,6 @@
 <RCC>
 <qresource>
-    <!--test files-->
+    <!--sample files-->
     <file>sample_problems/example.infile</file>
     <file>sample_problems/impossible.infile</file>
     <file>sample_problems/impossible2.infile</file>
@@ -13,5 +13,8 @@
     <file>sample_problems/sydney.infile</file>
     <file>sample_problems/temp.infile</file>
     <file>sample_problems/wavy.infile</file>
+    <!--test files-->
+    <file>test_problems/straight_line.infile</file>
+    <file>test_problems/straight_line_w_obs.infile</file>
 </qresource>
 </RCC>

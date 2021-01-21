@@ -14,6 +14,7 @@
 #include "router/router.h"
 #include "viewer.h"
 #include "route_inspector.h"
+#include "invoker.h"
 
 namespace gui {
 
@@ -52,6 +53,7 @@ namespace gui {
     rt::Problem problem;    //!< Problem to be routed.
     gui::Viewer *viewer;    //!< Pointer to the problem viewer.
     gui::RouteInspector *inspector; //!< Pointer to the route inspector.
+    gui::Invoker *invoker;  //!< Pointer to router Invoker.
     QString open_dir_path;  //!< Store the directory path of the last opened file.
 
   };

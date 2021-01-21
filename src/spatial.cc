@@ -152,6 +152,11 @@ bool Grid::routeExistsBetweenPins(const Coord &a, const Coord &b)
   int pin_set_id = cellAt(a)->pinSetId();
   assert(cellAt(b)->pinSetId() == pin_set_id);
 
+  // if both coordinates are the same then they're connected
+  if (a == b) {
+    return true;
+  }
+
   // operate on a copy of the grid
   Grid grid_cp(this);
   grid_cp.clearWorkingValues();

@@ -9,7 +9,6 @@
 #define _GUI_ROUTE_INSPECTOR_H_
 
 #include <QtWidgets>
-#include "router/problem.h"
 #include "router/router.h"
 #include "viewer.h"
 

@@ -25,19 +25,29 @@ set(BIN_SOURCES
     gui/viewer.cc
     gui/settings.cc
     gui/route_inspector.cc
+    gui/invoker.cc
     gui/prim/cell.cc
     router/router.cc
     router/problem.cc
+    router/routing_records.cc
+    router/algs/alg.cc
+    router/algs/a_star.cc
+    router/algs/lee_moore.cc
     )
 set(BIN_HEADERS
     spatial.h
     gui/mainwindow.h
     gui/viewer.h
     gui/settings.h
-    gui/route_inspector.cc
+    gui/route_inspector.h
+    gui/invoker.h
     gui/prim/cell.h
     router/router.h
     router/problem.h
+    router/routing_records.h
+    router/algs/alg.h
+    router/algs/a_star.h
+    router/algs/lee_moore.h
     )
 
 # libraries to be linked

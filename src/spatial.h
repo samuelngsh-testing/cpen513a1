@@ -8,6 +8,7 @@
 #ifndef _SP_SPATIAL_H_
 #define _SP_SPATIAL_H_
 
+#include <QVariant>
 #include <QObject>
 #include <QVector>
 #include <QMap>

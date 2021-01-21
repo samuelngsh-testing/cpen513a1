@@ -57,14 +57,6 @@ namespace rt {
     //! Return a list of pin sets.
     QList<sp::PinSet> pinSets() const {return pin_sets;}
 
-    // TODO remove:
-    //! Return a constant reference to the cell map.
-    //const QMap<sp::Coord, sp::CellType> &cellMap() const {return cell_map;}
-
-    // TODO remove:
-    //! Return a constant reference to the pin set ID map.
-    //const QMap<sp::Coord, int> &pinSetIdMap() const {return pin_set_id_map;}
-
   private:
 
     //! Construct cell map.
@@ -75,9 +67,6 @@ namespace rt {
     QList<sp::Coord> obs_cells;   //!< List of obstruction cells.
     QList<sp::PinSet> pin_sets;   //!< List of sets of pins
     sp::Grid cell_grid;           //!< Grid of cells in the problem
-    // TODO remove:
-    //QMap<sp::Coord, sp::CellType> cell_map;   //!< A map of cell types for the entire grid.
-    //QMap<sp::Coord, int> pin_set_id_map;  //!< A map containing pin set IDs.
   };
 }
 

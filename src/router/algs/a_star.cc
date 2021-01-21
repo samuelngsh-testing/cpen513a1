@@ -10,9 +10,9 @@
 
 using namespace rt;
 
-bool AStarAlg::findRoute(const sp::Coord &source_coord, 
+QList<sp::Coord> AStarAlg::findRoute(const sp::Coord &source_coord, 
     const sp::Coord &sink_coord, sp::Grid *grid, bool t_routed_cells_lower_cost,
-    RoutingRecords *record_keeper)
+    bool clear_working_values, RoutingRecords *record_keeper)
 {
   routed_cells_lower_cost = t_routed_cells_lower_cost;
 
@@ -21,29 +21,27 @@ bool AStarAlg::findRoute(const sp::Coord &source_coord,
   }
 
   sp::Coord termination;  // valid termination (sink or routed cell)
+  QList<sp::Coord> route;
   int pin_set_id = grid->cellAt(source_coord)->pinSetId();
   bool success = runAStar(source_coord, sink_coord, grid, pin_set_id, 
-      termination, record_keeper);
+      termination, route, record_keeper);
 
   if (success) {
-    runBacktrace(termination, source_coord, grid, pin_set_id, record_keeper);
-  }
-  if (record_keeper != nullptr) {
-    record_keeper->logCellGrid(grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);
+    runBacktrace(termination, source_coord, grid, pin_set_id, route, record_keeper);
   }
 
   // clear all working values
-  grid->clearWorkingValues();
-  if (record_keeper != nullptr) {
-    record_keeper->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
+  if (clear_working_values) {
+    grid->clearWorkingValues();
   }
 
-  return success;
+  return route;
 }
 
 QMultiMap<QPair<int,int>,sp::Coord> AStarAlg::markNeighbors(const sp::Coord &coord,
     const sp::Coord &source_coord, const sp::Coord &sink_coord, sp::Grid *grid,
-    int pin_set_id, bool &marked, sp::Coord &termination) const
+    int pin_set_id, bool &marked, QList<sp::Coord> &term_to_sink_route, 
+    sp::Coord &termination) const
 {
   marked = false;
   termination = sp::Coord();
@@ -79,7 +77,7 @@ QMultiMap<QPair<int,int>,sp::Coord> AStarAlg::markNeighbors(const sp::Coord &coo
         // bookeeping
         marked = true;
         bool is_elig_rcell = (nc->getType() == sp::RoutedCell 
-            && grid->routeExistsBetweenPins(neighbor, sink_coord));
+            && grid->routeExistsBetweenPins(neighbor, sink_coord, &term_to_sink_route));
         if (neighbor == sink_coord || is_elig_rcell) {
           termination = neighbor;
         }
@@ -91,7 +89,7 @@ QMultiMap<QPair<int,int>,sp::Coord> AStarAlg::markNeighbors(const sp::Coord &coo
 
 bool AStarAlg::runAStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
     sp::Grid *grid, int pin_set_id, sp::Coord &termination, 
-    RoutingRecords *record_keeper) const
+    QList<sp::Coord> &term_to_sink_route, RoutingRecords *record_keeper) const
 {
   bool marked;
   // keep a map of neighbors to be explored -- first key is the A* score and 
@@ -108,11 +106,12 @@ bool AStarAlg::runAStar(const sp::Coord &source_coord, const sp::Coord &sink_coo
     sp::Coord coord_mwv = expl_map.take(expl_map.firstKey());
     // insert newly found neighbors to the exploration map
     expl_map.unite(markNeighbors(coord_mwv, source_coord, sink_coord, grid, 
-          pin_set_id, marked, termination));
+          pin_set_id, marked, term_to_sink_route, termination));
     if (marked && record_keeper != nullptr) {
       record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
     }
     if (!termination.isBlank()) {
+      term_to_sink_route.append(termination);
       return true;
     }
   }
@@ -121,25 +120,33 @@ bool AStarAlg::runAStar(const sp::Coord &source_coord, const sp::Coord &sink_coo
 }
 
 void AStarAlg::runBacktrace(const sp::Coord &curr_coord, const sp::Coord &source_coord,
-    sp::Grid *grid, int pin_set_id, RoutingRecords *record_keeper) const
+    sp::Grid *grid, int pin_set_id, QList<sp::Coord> &route, 
+    RoutingRecords *record_keeper) const
 {
   if (curr_coord == source_coord) {
     return;
   } else {
     QVariant from_coord_v = grid->cellAt(curr_coord)->extraProps()["from_coord"];
     sp::Coord from_coord = from_coord_v.value<sp::Coord>();
+    route.append(from_coord);
+    
+    /* TODO delete
     sp::Cell *from_cell = grid->cellAt(from_coord);
     if (from_cell->getType() != sp::PinCell) {
       from_cell->setType(sp::RoutedCell);
       from_cell->setPinSetId(pin_set_id);
     }
-    if (grid->routeExistsBetweenPins(from_coord, source_coord)) {
-      // backtracing ends early because connect is already made
-      return;
-    }
+    */
+    // TODO delete
+    //if (grid->routeExistsBetweenPins(from_coord, source_coord)) {
+    //  // backtracing ends early because connect is already made
+    //  return;
+    //}
+    /* TODO delete
     if (record_keeper != nullptr) {
       record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
     }
-    runBacktrace(from_coord, source_coord, grid, pin_set_id, record_keeper);
+    */
+    runBacktrace(from_coord, source_coord, grid, pin_set_id, route, record_keeper);
   }
 }

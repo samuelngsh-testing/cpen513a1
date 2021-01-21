@@ -28,9 +28,15 @@ namespace rt {
     //! Attempt to find a route between the provided source and sink coordinates.
     //! Return whether or not a connection was made.
     //! (For subclass to implement.)
-    virtual bool findRoute(const sp::Coord &source_coord, const sp::Coord &sink_coord,
-        sp::Grid *grid, bool routed_cells_lower_cost, 
-        RoutingRecords *record_keeper=nullptr) = 0;
+    virtual QList<sp::Coord> findRoute(const sp::Coord &source_coord, 
+        const sp::Coord &sink_coord, sp::Grid *grid, bool routed_cells_lower_cost, 
+        bool clear_working_values=true, RoutingRecords *record_keeper=nullptr) = 0;
+
+    //! Attempt to find a route but allowing potential ripping.
+    QList<sp::Coord> findRouteAllowRip(const sp::Coord &source_coord,
+        const sp::Coord &sink_coord, sp::Grid *grid, bool routed_cells_lower_cost,
+        QList<sp::Connection*> rip_blacklist, bool clear_working_values=true,
+        RoutingRecords *record_keeper=nullptr);
 
   };
 

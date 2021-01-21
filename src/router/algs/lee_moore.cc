@@ -10,9 +10,9 @@
 
 using namespace rt;
 
-bool LeeMooreAlg::findRoute(const sp::Coord &source_coord, 
+QList<sp::Coord> LeeMooreAlg::findRoute(const sp::Coord &source_coord, 
     const sp::Coord &sink_coord, sp::Grid *grid, bool t_routed_cells_lower_cost, 
-    RoutingRecords *record_keeper)
+    bool clear_working_values, RoutingRecords *record_keeper)
 {
   routed_cells_lower_cost = t_routed_cells_lower_cost;
   if (record_keeper != nullptr) {
@@ -21,14 +21,17 @@ bool LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   sp::Cell *source_cell = grid->cellAt(source_coord);
   int pin_set_id = source_cell->pinSetId();
   sp::Coord termination;
+  QList<sp::Coord> route;
 
   // run Lee Moore forward pass
   qDebug() << QObject::tr("Running Lee-Moore from %1 to %2")
     .arg(source_coord.str()).arg(sink_coord.str());
-  bool success = runLeeMoore(source_coord, sink_coord, grid, pin_set_id, termination, record_keeper);
+  bool success = runLeeMoore(source_coord, sink_coord, grid, pin_set_id, 
+      termination, route, record_keeper);
 
   if (success) {
-    runBacktrace(termination, source_coord, sink_coord, grid, pin_set_id, record_keeper);
+    runBacktrace(termination, source_coord, sink_coord, grid, pin_set_id, route,
+        record_keeper);
   } else {
     qDebug() << QObject::tr("Failed to run Lee-Moore on pin set %1").arg(pin_set_id);
   }
@@ -37,12 +40,17 @@ bool LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   }
 
   // clear all working values
-  grid->clearWorkingValues();
+  if (clear_working_values) {
+    grid->clearWorkingValues();
+  }
+  /*
+     TODO remove
   if (record_keeper != nullptr) {
     record_keeper->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
   }
+  */
 
-  return success;
+  return route;
 }
 
 QList<sp::Coord> LeeMooreAlg::markNeighbors(const sp::Coord &coord, sp::Grid *grid,
@@ -74,7 +82,8 @@ QList<sp::Coord> LeeMooreAlg::markNeighbors(const sp::Coord &coord, sp::Grid *gr
 
 bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
     const sp::Coord &sink_coord, sp::Grid *grid, int pin_set_id, 
-    sp::Coord &termination, RoutingRecords *record_keeper) const
+    sp::Coord &termination, QList<sp::Coord> &term_to_sink_route, 
+    RoutingRecords *record_keeper) const
 {
   bool marked;
   // add source to evaluation list
@@ -85,10 +94,11 @@ bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
     sp::Coord base_coord = neighbors.takeFirst();
     sp::Cell *base_cell = grid->cellAt(base_coord);
     if (base_cell->pinSetId() == pin_set_id 
-        && grid->routeExistsBetweenPins(base_coord, sink_coord)) {
+        && grid->routeExistsBetweenPins(base_coord, sink_coord, &term_to_sink_route)) {
       // return if a connection has been made to the sink or a routed wire that
       // leads to the sink
       termination = base_coord;
+      term_to_sink_route.append(termination);
       return true;
     }
     // keep marking neighbors
@@ -103,7 +113,7 @@ bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
 
 void LeeMooreAlg::runBacktrace(const sp::Coord &curr_coord, 
     const sp::Coord &source_coord, const sp::Coord &sink_coord, sp::Grid *grid,
-    int pin_set_id, RoutingRecords *record_keeper) const
+    int pin_set_id, QList<sp::Coord> &route, RoutingRecords *record_keeper) const
 {
   if (curr_coord == source_coord) {
     // backtrace complete
@@ -115,15 +125,18 @@ void LeeMooreAlg::runBacktrace(const sp::Coord &curr_coord,
         // back tracing complete
         return;
       } else if (nc->workingValue() >= 0 && nc->workingValue() < curr_working_val) {
+        /* TODO remove
         // update cell type for chosen routed cells
         nc->setType(sp::RoutedCell);
         nc->setPinSetId(pin_set_id);
         if (record_keeper != nullptr) {
           record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
         }
+        */
+        route.append(nc->getCoord());
         // recurse until source reached
         runBacktrace(nc->getCoord(), source_coord, sink_coord, grid, pin_set_id,
-            record_keeper);
+            route, record_keeper);
         break;
       }
     }

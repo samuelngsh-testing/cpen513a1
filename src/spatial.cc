@@ -147,63 +147,46 @@ bool Grid::isWithinBounds(const Coord &coord)
   return (coord.x >= 0 && coord.y >= 0 && coord.x < dim_x && coord.y < dim_y);
 }
 
-bool Grid::routeExistsBetweenPins(const Coord &a, const Coord &b)
+bool Grid::routeExistsBetweenPins(const Coord &a, const Coord &b, 
+    QList<sp::Coord> *route)
 {
   int pin_set_id = cellAt(a)->pinSetId();
   assert(cellAt(b)->pinSetId() == pin_set_id);
 
-  // if both coordinates are the same then they're connected
-  if (a == b) {
-    return true;
-  }
-
   // operate on a copy of the grid
   Grid grid_cp(this);
   grid_cp.clearWorkingValues();
+  grid_cp(a)->setWorkingValue(1); // prevent coord a from being revisited
 
-  // lambda function that returns neighboring cells of the provided coordinate
-  // that are of type RoutedCell or PinCell. The keys in the returned map denote
-  // the Manhattan distance of that cell to the destination (point b).
-  auto neighborRoutes = [this, &b, &grid_cp, &pin_set_id](const Coord &coord, bool &b_found)->QMultiMap<int,Coord>
+  // recursively look at neighboring RoutedCells/Pins starting from point a
+  // until point b is found.
+  std::function<bool(const Coord &curr_coord)> findB;
+  findB = [this, &a, &b, &grid_cp, &pin_set_id, route, &findB](const Coord &curr_coord)->bool
   {
-    b_found = false;
-    QMultiMap<int,Coord> expl_map;
-    QList<Coord> neighbors = neighborCoordsOf(coord);
-    for (Coord neighbor : neighbors) {
-      Cell *nc = grid_cp(neighbor);
-      CellType type = nc->getType();
-      if (nc->workingValue() < 0 && nc->pinSetId() == pin_set_id 
-          && (type == RoutedCell || type == PinCell)) {
-        // denote eligible cells by the Manhattan distance to the destination
-        int d_to_b = neighbor.manhattanDistance(b);
-        nc->setWorkingValue(d_to_b);
-        expl_map.insert(d_to_b, neighbor);
-        if (d_to_b == 0) {
-          b_found = true;
+    if (curr_coord == b) {
+      return true;
+    } else {
+      QList<Coord> neighbors = neighborCoordsOf(curr_coord);
+      for (Coord neighbor : neighbors) {
+        Cell *nc = grid_cp(neighbor);
+        CellType type = nc->getType();
+        if (nc->workingValue() < 0 && nc->pinSetId() == pin_set_id
+            && (type == RoutedCell || type == PinCell)) {
+          nc->setWorkingValue(1);
+          bool success = findB(neighbor);
+          if (success) {
+            if (route != nullptr && a != curr_coord) {
+              route->append(curr_coord);
+            }
+            return true;
+          }
         }
-      }
-    }
-    return expl_map;
-  };
-
-  // lambda function that traverses through eligible neighboring cells starting 
-  // from the provided point until point b is reached
-  auto trace = [&a, &b, &neighborRoutes]()->bool
-  {
-    bool b_found=false;
-    QMultiMap<int,Coord> expl_map;
-    expl_map.insert(a.manhattanDistance(b), a);
-    while (!expl_map.isEmpty()) {
-      sp::Coord coord = expl_map.take(expl_map.firstKey());
-      expl_map.unite(neighborRoutes(coord, b_found));
-      if (b_found) {
-        return true;
       }
     }
     return false;
   };
 
-  return trace();
+  return findB(a);
 }
 
 bool Grid::allPinsRouted()

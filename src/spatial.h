@@ -39,6 +39,9 @@ namespace sp {
     //! == operator
     bool operator==(const Coord &other) const;
 
+    //! != operator
+    bool operator!=(const Coord &other) const {return !((*this)==other);}
+
     //! Return the coordinates in parenthesis string form for easy debugging.
     QString str() const {return QString("(%1, %2)").arg(x).arg(y);}
 
@@ -82,8 +85,48 @@ namespace sp {
     return (h1 < h2);
   }
 
-  // Declare PinSet as an alias that stores sets of pins to be connected
+  //! Declare PinSet as an alias that stores sets of pins to be connected
   using PinSet = QList<Coord>;
+
+  //! Declare PinPair as an alias that stores pairs of pins (useful for hashing)
+  using PinPair = QPair<sp::Coord, sp::Coord>;
+
+  //! Handy class for keeping track of routed wires.
+  class Connection
+  {
+  public:
+
+    //! Empty constructor.
+    Connection() : pin_set_id(-1) {};
+
+    //! Construct with provided cells and pin set ID.
+    Connection(PinPair t_pin_pair, const QList<sp::Coord> &coords, int t_pin_set_id)
+    {
+      setRoutedCells(t_pin_pair, coords, t_pin_set_id);
+    }
+
+    //! Set the provided coordinates to belong to this connecction.
+    void setRoutedCells(const PinPair &t_pin_pair, const QList<sp::Coord> &cells,
+        int t_pin_set_id)
+    {
+      pin_pair = t_pin_pair;
+      routed_cells = cells;
+      pin_set_id = t_pin_set_id;
+    }
+
+    //! Return the routed cells that belong to this connection.
+    QList<sp::Coord> routedCells() const {return routed_cells;}
+
+    //! Return whether this is connection is empty or not.
+    bool isEmpty() {return routed_cells.isEmpty();}
+
+  private:
+
+    // Private variables
+    PinPair pin_pair;               //! The pair of pins that this connection is for
+    int pin_set_id = -1;            //! Pin set ID
+    QList<sp::Coord> routed_cells;  //! A list of routed cells that belong to this connection
+  };
 
   //! A cell that belongs to a grid data structure.
   class Cell
@@ -199,14 +242,22 @@ namespace sp {
     //! Return a pointer to the cell grid.
     QVector<QVector<Cell*>> *cellGrid() {return &cell_grid;}
 
+    //! Return a MultiMap that contains the connection attributes with 
+    //! coordinates as keys.
+    QMultiMap<sp::Coord,Connection*> *connMap() {return &conn;}
+
     //! Clear all working values from all cells in the grid.
     void clearWorkingValues();
 
     //! Return whether the specified coordinates are within bounds.
     bool isWithinBounds(const Coord &);
 
-    //! Return whether a route exists between the provided pins.
-    bool routeExistsBetweenPins(const Coord &a, const Coord &b);
+    //! Return whether a route exists between the provided pins. If a route list
+    //! is provided and if a route does exist, coordinates constituting the 
+    //! route would be added to the list pointer.
+    //! Note that the points a and b will NOT be added to the route pointer.
+    bool routeExistsBetweenPins(const Coord &a, const Coord &b, 
+        QList<sp::Coord> *route=nullptr);
 
     //! Return whether all pins have been connected by RoutedCells. Checks by 
     //! exhaustively tracing all pin combinations of each pin set.
@@ -221,8 +272,9 @@ namespace sp {
     // Private variables
     int dim_x;          //!< x size.
     int dim_y;          //!< y size.
-    QVector<QVector<Cell*>> cell_grid;  //!< Grid of cells.
-    QMap<int,PinSet> pin_sets;          //!< Keep track of pin sets.
+    QVector<QVector<Cell*>> cell_grid;    //!< Grid of cells.
+    QMap<int,PinSet> pin_sets;            //!< Keep track of pin sets.
+    QMultiMap<sp::Coord,Connection*> conn; //!< Keep track of pin pair connections.
   };
 
   inline uint qHash(const Coord &coord, uint seed=0)

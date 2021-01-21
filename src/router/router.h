@@ -52,6 +52,20 @@ namespace rt {
     bool routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
         SolveCollection *solve_col);
 
+    //! Create a routed connection with the provided list of coordinates and 
+    //! settings.
+    sp::Connection *createConnection(const sp::PinPair &pin_pair,
+        const QList<sp::Coord> &route, int pin_set_id, sp::Grid *grid,
+        RoutingRecords *record_keeper=nullptr);
+
+    //! Rip a connection (turn routed cells to blank). If a cell is used for 
+    //! more than one connection, it would not be ripped (but the specified 
+    //! Connection record would still be destroy).
+    //! This does not delete the Connection pointer, the caller should deal with
+    //! that.
+    void ripConnection(sp::Connection *conn, sp::Grid *grid,
+        RoutingRecords *record_keeper=nullptr);
+
   private:
 
     // Private variables

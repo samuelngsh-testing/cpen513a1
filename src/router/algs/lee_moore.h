@@ -26,9 +26,10 @@ namespace rt {
     ~LeeMooreAlg() {};
 
     //! Override the findRoute function to implement the LeeMoore algorithm.
-    QList<sp::Coord> findRoute(const sp::Coord &source_coord,
+    RouteResult findRoute(const sp::Coord &source_coord,
         const sp::Coord &sink_coord, sp::Grid *grid, bool routed_cells_lower_cost, 
-        bool clear_working_values=true, 
+        bool clear_working_values=true, bool attempt_rip=false,
+        QList<sp::Connection*> *rip_blacklist=nullptr,
         RoutingRecords *record_keeper=nullptr) override;
 
   private:

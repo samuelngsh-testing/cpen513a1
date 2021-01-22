@@ -52,11 +52,21 @@ namespace rt {
     bool routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
         SolveCollection *solve_col);
 
+    //! Attempt to route with rip and reroute (TODO after everything is settled,
+    //! put rip and reroute and net reordering as configurable settings)
+    bool routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
+        SolveCollection *solve_col);
+
     //! Create a routed connection with the provided list of coordinates and 
     //! settings.
     sp::Connection *createConnection(const sp::PinPair &pin_pair,
         const QList<sp::Coord> &route, int pin_set_id, sp::Grid *grid,
         RoutingRecords *record_keeper=nullptr);
+
+    //! Return a set of connections that the provided list of coordinates 
+    //! cross through (empty list if there are no existing connections).
+    QSet<sp::Connection*> existingConnections(const QList<sp::Coord> &coords,
+        sp::Grid *grid);
 
     //! Rip a connection (turn routed cells to blank). If a cell is used for 
     //! more than one connection, it would not be ripped (but the specified 

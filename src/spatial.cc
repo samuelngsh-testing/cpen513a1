@@ -81,6 +81,20 @@ void Grid::copyState(Grid *other)
       cell_grid[i][j] = new Cell(*other->cell_grid[i][j]);
     }
   }
+  conn.clear();
+  QMap<sp::Connection*,sp::Connection*> old_to_new_ptr;
+  for (auto it=other->conn.begin(); it!=other->conn.end(); it++) {
+    auto find_ptr = old_to_new_ptr.constFind(it.value());
+    if (find_ptr != old_to_new_ptr.constEnd()) {
+      // re-insert the pointer if it had been created
+      conn.insert(it.key(), find_ptr.value());
+    } else {
+      // create the pointer and keep track of it
+      sp::Connection *nconn = new sp::Connection(it.value());
+      old_to_new_ptr[it.value()] = nconn;
+      conn.insert(it.key(), nconn);
+    }
+  }
 }
 
 void Grid::setObsCells(const QList<Coord> &obs_coords, bool check_clash)
@@ -138,6 +152,7 @@ void Grid::clearWorkingValues()
   for (auto x_cells : cell_grid) {
     for (Cell *cell : x_cells) {
       cell->resetWorkingValue();
+      cell->extraProps().clear();
     }
   }
 }

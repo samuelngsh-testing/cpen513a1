@@ -10,14 +10,12 @@
 
 using namespace rt;
 
-QList<sp::Coord> LeeMooreAlg::findRoute(const sp::Coord &source_coord, 
+RouteResult LeeMooreAlg::findRoute(const sp::Coord &source_coord, 
     const sp::Coord &sink_coord, sp::Grid *grid, bool t_routed_cells_lower_cost, 
-    bool clear_working_values, RoutingRecords *record_keeper)
+    bool clear_working_values, bool, QList<sp::Connection*> *,
+    RoutingRecords *record_keeper)
 {
   routed_cells_lower_cost = t_routed_cells_lower_cost;
-  if (record_keeper != nullptr) {
-    record_keeper->newSolveSteps();
-  }
   sp::Cell *source_cell = grid->cellAt(source_coord);
   int pin_set_id = source_cell->pinSetId();
   sp::Coord termination;
@@ -50,7 +48,11 @@ QList<sp::Coord> LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   }
   */
 
-  return route;
+  RouteResult result;
+  result.route_coords = route;
+  result.requires_rip = false;  // ripping support not implemented in Lee-Moore
+
+  return result;
 }
 
 QList<sp::Coord> LeeMooreAlg::markNeighbors(const sp::Coord &coord, sp::Grid *grid,

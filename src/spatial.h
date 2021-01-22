@@ -105,6 +105,10 @@ namespace sp {
       setRoutedCells(t_pin_pair, coords, t_pin_set_id);
     }
 
+    //! Copy constructor given a pointer to another conneciton.
+    Connection(Connection *other) : pin_pair(other->pin_pair), 
+      pin_set_id(other->pin_set_id), routed_cells(other->routed_cells) {};
+
     //! Set the provided coordinates to belong to this connecction.
     void setRoutedCells(const PinPair &t_pin_pair, const QList<sp::Coord> &cells,
         int t_pin_set_id)
@@ -116,6 +120,9 @@ namespace sp {
 
     //! Return the routed cells that belong to this connection.
     QList<sp::Coord> routedCells() const {return routed_cells;}
+
+    //! Return the pair of pins this route connects.
+    PinPair pinPair() {return pin_pair;}
 
     //! Return whether this is connection is empty or not.
     bool isEmpty() {return routed_cells.isEmpty();}
@@ -270,11 +277,11 @@ namespace sp {
     void clearGrid();
 
     // Private variables
-    int dim_x;          //!< x size.
-    int dim_y;          //!< y size.
-    QVector<QVector<Cell*>> cell_grid;    //!< Grid of cells.
-    QMap<int,PinSet> pin_sets;            //!< Keep track of pin sets.
-    QMultiMap<sp::Coord,Connection*> conn; //!< Keep track of pin pair connections.
+    int dim_x;                              //!< x size.
+    int dim_y;                              //!< y size.
+    QVector<QVector<Cell*>> cell_grid;      //!< Grid of cells.
+    QMap<int,PinSet> pin_sets;              //!< Keep track of pin sets.
+    QMultiMap<sp::Coord,Connection*> conn;  //!< Keep track of pin pair connections.
   };
 
   inline uint qHash(const Coord &coord, uint seed=0)

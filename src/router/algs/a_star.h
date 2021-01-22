@@ -26,9 +26,10 @@ namespace rt{
     ~AStarAlg() {};
 
     //! Override the findRoute function to implement the A* algorithm.
-    QList<sp::Coord> findRoute(const sp::Coord &source_coord,
+    RouteResult findRoute(const sp::Coord &source_coord,
         const sp::Coord &sink_coord, sp::Grid *grid, bool routed_cells_lower_cost, 
-        bool clear_working_values=true, 
+        bool clear_working_values=true, bool attempt_rip=false,
+        QList<sp::Connection*> *rip_blacklist=nullptr,
         RoutingRecords *record_keeper=nullptr) override;
 
   private:
@@ -42,10 +43,14 @@ namespace rt{
     //! distance to the sink (such that closer ones are explored first).
     //! If termination is not sink, then term_to_sink_route ref would be updated
     //! to include the path between the termination and sink.
+    //! Neighbors that require ripping in order to access are put in the 
+    //! rip_neighbors reference. rip_neighbors' key is a tuple of three ints:
+    //! 0. Connections ripped if ripping this cell, 1. A* score, 2. distance to sink.
     QMultiMap<QPair<int,int>,sp::Coord> markNeighbors(const sp::Coord &coord,
         const sp::Coord &source_coord, const sp::Coord &sink_coord, sp::Grid *grid,
-        int pin_set_id, bool &marked, QList<sp::Coord> &term_to_sink_route, 
-        sp::Coord &termination) const;
+        int pin_set_id, bool &marked, sp::Coord &termination,
+        QList<sp::Coord> &term_to_sink_route,
+        QMultiMap<std::tuple<int,int,int>, sp::Coord> &rip_neighbors) const;
 
     //! Mark neighboring cells contageously from the source coordinate using the
     //! A* algorithm until the specified sink (or eligible routing cell) is 
@@ -55,7 +60,7 @@ namespace rt{
     //! be updated to include the path between the termination and sink.
     bool runAStar(const sp::Coord &source_coord, const sp::Coord &sink_coord,
         sp::Grid *grid, int pin_set_id, sp::Coord &termination,
-        QList<sp::Coord> &term_to_sink_route,
+        QList<sp::Coord> &term_to_sink_route, bool &route_requires_rip,
         RoutingRecords *record_keeper=nullptr) const;
 
     //! Backtrace from the terminating cell recursively. To be called after 
@@ -67,6 +72,8 @@ namespace rt{
 
     // Private variables
     bool routed_cells_lower_cost;
+    bool attempt_rip;
+    QList<sp::Connection*> *rip_blacklist=nullptr;
 
   };
 

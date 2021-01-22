@@ -22,11 +22,15 @@ namespace rt {
   struct RouterSettings
   {
     // routing settings
-    AvailAlg use_alg=AStar;
-    bool routed_cells_lower_cost=false;
+    AvailAlg use_alg=AStar;             //!< routing algorithm to use
+    bool routed_cells_lower_cost=false; //!< existing routes have lower traverse cost
+    bool net_reordering=true;           //!< enable net reordering
+    int max_rerun_count=5;              //!< maximum global reroute count (with net reordering)
+    bool rip_and_reroute=true;          //!< enable rip and reroute
+    int rip_and_rerout_count=2;         //!< maximum rip and reroute attempts for a route
 
     // verbosity settings
-    LogVerbosity detail_level=LogCoarseIntermediate;
+    LogVerbosity log_level=LogCoarseIntermediate;
     GuiUpdateVerbosity gui_update_level=VisualizeCoarseIntermediate;
   };
 
@@ -55,7 +59,7 @@ namespace rt {
     //! Attempt to route with rip and reroute (TODO after everything is settled,
     //! put rip and reroute and net reordering as configurable settings)
     bool routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
-        SolveCollection *solve_col);
+        bool *soft_halt, SolveCollection *solve_col);
 
     //! Create a routed connection with the provided list of coordinates and 
     //! settings.
@@ -66,7 +70,7 @@ namespace rt {
     //! Return a set of connections that the provided list of coordinates 
     //! cross through (empty list if there are no existing connections).
     QSet<sp::Connection*> existingConnections(const QList<sp::Coord> &coords,
-        sp::Grid *grid);
+        sp::Grid *grid, int ignore_pin_id=-1);
 
     //! Rip a connection (turn routed cells to blank). If a cell is used for 
     //! more than one connection, it would not be ripped (but the specified 

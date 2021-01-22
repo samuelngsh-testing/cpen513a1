@@ -28,7 +28,6 @@ set(BIN_SOURCES
     gui/invoker.cc
     gui/prim/cell.cc
     router/router.cc
-    router/route_graph.cc
     router/problem.cc
     router/routing_records.cc
     router/algs/alg.cc
@@ -44,7 +43,6 @@ set(BIN_HEADERS
     gui/invoker.h
     gui/prim/cell.h
     router/router.h
-    router/route_graph.h
     router/problem.h
     router/routing_records.h
     router/algs/alg.h

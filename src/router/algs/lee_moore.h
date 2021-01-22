@@ -37,7 +37,7 @@ namespace rt {
     //! Mark all neighboring cells of a given coordinate. Returns a list of 
     //! neighbors that were successfully marked.
     QList<sp::Coord> markNeighbors(const sp::Coord &coord, sp::Grid *grid,
-        int pin_set_id, bool &marked) const;
+        int pin_set_id, bool &marked, bool allow_rip) const;
 
     //! Mark neighboring cells contageously from the source coordinate until
     //! the specified sink is reached or until no more neighbors are available
@@ -46,7 +46,8 @@ namespace rt {
     //! termination and sink. Otherwise it would not be manipulated.
     bool runLeeMoore(const sp::Coord &source_coord, const sp::Coord &sink_coord,
         sp::Grid *grid, int pin_set_id, sp::Coord &termination, 
-        QList<sp::Coord> &term_to_sink_route, RoutingRecords *record_keeper=nullptr) const;
+        QList<sp::Coord> &term_to_sink_route, bool &result_requires_rip,
+        RoutingRecords *record_keeper=nullptr) const;
 
     //! Backtrace from the sink (or terminating cell) recursively. To be called
     //! after cells have been marked appropriately. Writes route to the route ref.
@@ -56,6 +57,8 @@ namespace rt {
 
     // Private variables
     bool routed_cells_lower_cost;
+    bool attempt_rip;
+    QList<sp::Connection*> *rip_blacklist=nullptr;
   };
 
 }

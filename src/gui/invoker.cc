@@ -30,6 +30,7 @@ void Invoker::setProblem(const rt::Problem &p)
 
 void Invoker::runRoute()
 {
+  soft_halt=false;
   readRouterSettings();
   inspector->clearCollections();
   if (problem.isValid()) {
@@ -43,7 +44,7 @@ void Invoker::runRoute()
         inspector->solveCollection());
         */
     router.routeSuiteRipReroute(problem_cp.pinSets(), problem_cp.cellGrid(), 
-        inspector->solveCollection());
+        &soft_halt, inspector->solveCollection());
     inspector->updateCollections();
   } else {
     qDebug() << "Current problem is invalid, not routing.";
@@ -77,7 +78,10 @@ void Invoker::initInvoker()
   cbb_log_vb = new QComboBox();
   cbb_gui_vb = new QComboBox();
   cb_routed_cells_lower_cost = new QCheckBox();
+  cb_net_reordering = new QCheckBox();
+  cb_rip_and_reroute = new QCheckBox();
   QPushButton *pb_run = new QPushButton("Route");
+  QPushButton *pb_soft_halt = new QPushButton("Soft Halt");
   cbb_route_alg->addItems(avail_alg_str.keys());
   cbb_log_vb->addItems(log_vb_str.keys());
   cbb_gui_vb->addItems(gui_vb_str.keys());
@@ -87,9 +91,12 @@ void Invoker::initInvoker()
   cbb_log_vb->setCurrentText(log_vb_str.key(rt::LogCoarseIntermediate));
   cbb_gui_vb->setCurrentText(gui_vb_str.key(rt::VisualizeCoarseIntermediate));
   cb_routed_cells_lower_cost->setChecked(true);
+  cb_net_reordering->setChecked(true);
+  cb_rip_and_reroute->setChecked(true);
 
   // connect signals
   connect(pb_run, &QPushButton::released, [this](){runRoute();});
+  connect(pb_soft_halt, &QPushButton::released, [this](){soft_halt=true;});
 
   // add everything to widget layout
   QFormLayout *fl_settings = new QFormLayout();
@@ -97,16 +104,21 @@ void Invoker::initInvoker()
   fl_settings->addRow("Grid log verbosity", cbb_log_vb);
   fl_settings->addRow("GUI update verbosity", cbb_gui_vb);
   fl_settings->addRow("Routed cells lower cost", cb_routed_cells_lower_cost);
+  fl_settings->addRow("Net reordering", cb_net_reordering);
+  fl_settings->addRow("Rip and reroute", cb_rip_and_reroute);
   QVBoxLayout *vl_main = new QVBoxLayout();
   vl_main->addLayout(fl_settings);
   vl_main->addWidget(pb_run);
+  vl_main->addWidget(pb_soft_halt);
   setLayout(vl_main);
 }
 
 void Invoker::readRouterSettings()
 {
   settings.use_alg = avail_alg_str[cbb_route_alg->currentText()];
-  settings.detail_level = log_vb_str[cbb_log_vb->currentText()];
+  settings.log_level = log_vb_str[cbb_log_vb->currentText()];
   settings.gui_update_level = gui_vb_str[cbb_gui_vb->currentText()];
   settings.routed_cells_lower_cost = cb_routed_cells_lower_cost->isChecked();
+  settings.net_reordering = cb_net_reordering->isChecked();
+  settings.rip_and_reroute = cb_rip_and_reroute->isChecked();
 }

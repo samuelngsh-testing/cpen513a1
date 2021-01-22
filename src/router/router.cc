@@ -17,7 +17,7 @@ using namespace rt;
 Router::Router(const Problem &problem, RouterSettings settings)
   : problem(problem), settings(settings)
 {
-  records = new RoutingRecords(settings.detail_level, settings.gui_update_level);
+  records = new RoutingRecords(settings.log_level, settings.gui_update_level);
 }
 
 bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
@@ -168,7 +168,7 @@ bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
 }
 
 bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
-    SolveCollection *solve_col)
+    bool *soft_halt, SolveCollection *solve_col)
 {
   RoutingAlg *alg;
   switch (settings.use_alg) {
@@ -191,6 +191,9 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
   // construct a QMultiMap that uses the distances between pins as keys
   QMultiMap<int, sp::PinPair> map_pin_sets;
 
+  bool rip_and_reroute = settings.rip_and_reroute;
+  bool net_reordering = settings.net_reordering;
+
   // init the lists above
   // TODO put in separate function
   for (sp::PinSet pin_set : pin_sets) {
@@ -206,7 +209,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
     }
   }
 
-  int attempts_left = 5;
+  int attempts_left = (net_reordering) ? settings.max_rerun_count : 1;
   int difficult_boost_thresh = 2; // boost the order of the difficult pin after failing this many times
   bool all_done = false;
   QQueue<sp::PinPair> priority_routes;
@@ -219,7 +222,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
   // TODO remove QQueue<sp::PinPair> successful_routes;
   // TODO following implementation only contains one attempt pass. Proper 
   // implementation needs multiple passes
-  while (!all_done && attempts_left > 0 && !map_pin_sets.isEmpty()) {
+  while (!(*soft_halt) && !all_done && attempts_left > 0 && !map_pin_sets.isEmpty()) {
     sp::PinPair pin_pair;
     if (!priority_routes.isEmpty()) {
       pin_pair = priority_routes.dequeue();
@@ -256,7 +259,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
       QList<sp::Connection*> rip_blacklist;
       RouteResult result;
       result = alg->findRoute(source_coord, sink_coord, cell_grid, 
-          settings.routed_cells_lower_cost, false, true, &rip_blacklist, records);
+          settings.routed_cells_lower_cost, false, rip_and_reroute, &rip_blacklist, records);
       route = result.route_coords;
       if (!route.isEmpty()) {
         if (!result.requires_rip) {
@@ -268,7 +271,8 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
           if (records != nullptr) {
             records->logCellGrid(cell_grid, LogResultsOnly, VisualizeResultsOnly);
           }
-        } else {
+        } else if (rip_and_reroute) {
+          // attempt rip and reroute
           // save the cell grid before doing anything
           cell_grid->clearWorkingValues();
           sp::Grid grid_pre_rip;
@@ -277,7 +281,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
 
           // get the connections that need to be ripped to make this successful
           QList<sp::PinPair> pairs_to_reroute;
-          QSet<sp::Connection*> conns = existingConnections(route, cell_grid);
+          QSet<sp::Connection*> conns = existingConnections(route, cell_grid, (*cell_grid)(source_coord)->pinSetId());
           qDebug() << tr("Attempting rip and reroute with %1 routes to rip").arg(conns.count());
           for (sp::Connection *conn : conns) {
             pairs_to_reroute.append(conn->pinPair());
@@ -407,12 +411,14 @@ sp::Connection *Router::createConnection(const sp::PinPair &pin_pair,
 }
 
 QSet<sp::Connection*> Router::existingConnections(const QList<sp::Coord> &coords,
-    sp::Grid *grid)
+    sp::Grid *grid, int ignore_pin_id)
 {
   QSet<sp::Connection*> conns;
   for (const sp::Coord &coord : coords) {
     for (sp::Connection *conn : grid->connMap()->values(coord)) {
-      conns.insert(conn);
+      if (conn->pinSetId() != ignore_pin_id) {
+        conns.insert(conn);
+      }
     }
   }
   return conns;

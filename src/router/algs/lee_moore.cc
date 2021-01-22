@@ -12,24 +12,26 @@ using namespace rt;
 
 RouteResult LeeMooreAlg::findRoute(const sp::Coord &source_coord, 
     const sp::Coord &sink_coord, sp::Grid *grid, bool t_routed_cells_lower_cost, 
-    bool clear_working_values, bool, QList<sp::Connection*> *,
-    RoutingRecords *record_keeper)
+    bool clear_working_values, bool t_attempt_rip, 
+    QList<sp::Connection*> *t_rip_blacklist, RoutingRecords *record_keeper)
 {
   routed_cells_lower_cost = t_routed_cells_lower_cost;
+  rip_blacklist = t_rip_blacklist;
+  attempt_rip = t_attempt_rip;
   sp::Cell *source_cell = grid->cellAt(source_coord);
   int pin_set_id = source_cell->pinSetId();
   sp::Coord termination;
-  QList<sp::Coord> route;
+  RouteResult result;
 
   // run Lee Moore forward pass
   qDebug() << QObject::tr("Running Lee-Moore from %1 to %2")
     .arg(source_coord.str()).arg(sink_coord.str());
   bool success = runLeeMoore(source_coord, sink_coord, grid, pin_set_id, 
-      termination, route, record_keeper);
+      termination, result.route_coords, result.requires_rip, record_keeper);
 
   if (success) {
-    runBacktrace(termination, source_coord, sink_coord, grid, pin_set_id, route,
-        record_keeper);
+    runBacktrace(termination, source_coord, sink_coord, grid, pin_set_id, 
+        result.route_coords, record_keeper);
   } else {
     qDebug() << QObject::tr("Failed to run Lee-Moore on pin set %1").arg(pin_set_id);
   }
@@ -48,23 +50,22 @@ RouteResult LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   }
   */
 
-  RouteResult result;
-  result.route_coords = route;
-  result.requires_rip = false;  // ripping support not implemented in Lee-Moore
-
   return result;
 }
 
 QList<sp::Coord> LeeMooreAlg::markNeighbors(const sp::Coord &coord, sp::Grid *grid,
-    int pin_set_id, bool &marked) const
+    int pin_set_id, bool &marked, bool allow_rip) const
 {
   marked=false;
   QList<sp::Coord> neighbors = grid->neighborCoordsOf(coord);
   // mark each neighbor if eligible
   for (const sp::Coord &neighbor : neighbors) {
     sp::Cell *cell = grid->cellAt(neighbor);
-    if ((cell->getType() == sp::BlankCell || cell->pinSetId() == pin_set_id)
-        && (cell->workingValue() < 0)) {
+    bool elig_wo_rip = ((cell->getType() == sp::BlankCell || cell->pinSetId() == pin_set_id)
+        && (cell->workingValue() < 0));
+    bool elig_w_rip = ((cell->getType() == sp::RoutedCell && cell->pinSetId() != pin_set_id)
+        && (cell->workingValue() < 0));
+    if (elig_wo_rip || (allow_rip && elig_w_rip)) {
       // eligible neighbor found
       int cost;
       if (routed_cells_lower_cost && cell->pinSetId() == pin_set_id) {
@@ -85,9 +86,10 @@ QList<sp::Coord> LeeMooreAlg::markNeighbors(const sp::Coord &coord, sp::Grid *gr
 bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
     const sp::Coord &sink_coord, sp::Grid *grid, int pin_set_id, 
     sp::Coord &termination, QList<sp::Coord> &term_to_sink_route, 
-    RoutingRecords *record_keeper) const
+    bool &result_requires_rip, RoutingRecords *record_keeper) const
 {
   bool marked;
+  bool rip_phase=false;
   // add source to evaluation list
   QList<sp::Coord> neighbors({source_coord});
   grid->cellAt(source_coord)->setWorkingValue(0);
@@ -101,12 +103,19 @@ bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
       // leads to the sink
       termination = base_coord;
       term_to_sink_route.append(termination);
+      result_requires_rip = rip_phase;
       return true;
     }
     // keep marking neighbors
-    neighbors.append(markNeighbors(base_coord, grid, pin_set_id, marked));
+    neighbors.append(markNeighbors(base_coord, grid, pin_set_id, marked, rip_phase && attempt_rip));
     if (marked && record_keeper != nullptr) {
       record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
+    }
+    if (neighbors.isEmpty() && !rip_phase) {
+      // enter rip phase attempt
+      rip_phase = true;
+      grid->clearWorkingValues();
+      neighbors.append(source_coord);
     }
   }
   // reaching this point means that no solution was found

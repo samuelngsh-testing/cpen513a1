@@ -118,6 +118,9 @@ namespace sp {
       pin_set_id = t_pin_set_id;
     }
 
+    //! Return the pin set id
+    int pinSetId() const {return pin_set_id;}
+
     //! Return the routed cells that belong to this connection.
     QList<sp::Coord> routedCells() const {return routed_cells;}
 

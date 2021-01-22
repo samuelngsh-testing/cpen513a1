@@ -50,12 +50,15 @@ namespace gui{
     RouteInspector *inspector;      //!< Route inspector for direct calling.
     rt::Problem problem;            //!< Current problem.
     rt::RouterSettings settings;    //!< Runtime settings to be sent to router.
+    bool soft_halt;                 //!< Tell router to stop.
 
     // GUI variables
     QComboBox *cbb_route_alg;
     QComboBox *cbb_log_vb;
     QComboBox *cbb_gui_vb;
     QCheckBox *cb_routed_cells_lower_cost;
+    QCheckBox *cb_net_reordering;
+    QCheckBox *cb_rip_and_reroute;
 
     static QMap<QString, rt::AvailAlg> avail_alg_str;
     static QMap<QString, rt::LogVerbosity> log_vb_str;

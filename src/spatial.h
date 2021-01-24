@@ -269,9 +269,21 @@ namespace sp {
     bool routeExistsBetweenPins(const Coord &a, const Coord &b, 
         QList<sp::Coord> *route=nullptr);
 
+    //! Return all pins that a specified coordinate is connected to (via routed
+    //! cells or pins of the same pin set id). If the provided coordinate is 
+    //! not part of a wire, then the returned list is blank.
+    QList<Coord> connectedPins(const Coord &coord);
+
     //! Return whether all pins have been connected by RoutedCells. Checks by 
     //! exhaustively tracing all pin combinations of each pin set.
     bool allPinsRouted();
+
+    //! Return the count of connected segments.
+    int countSegments();
+
+    //! Count cells of the specified types. If the provided list is empty, 
+    //! returns a count of all cells (just width * height).
+    int countCells(const QSet<CellType> &types);
 
 
   private:

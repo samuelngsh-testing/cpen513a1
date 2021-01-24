@@ -37,6 +37,12 @@ namespace gui {
     //! in response to changes in the SolveCollection.
     void updateCollections();
 
+    //! Show the "best" collection, here defined as the collection with most
+    //! routed segments (first priority) and least routed cells (second 
+    //! priority). If multiple candidates are tied, selects the one with lower
+    //! index.
+    void showBestCollection();
+
     //! Show the specified solve collection and step. Provide -1 for the last step.
     void showSolveStep(int collection, int step);
 
@@ -56,6 +62,8 @@ namespace gui {
     rt::SolveCollection solve_col;    //!< Record of steps taken to solve the problem.
 
     // Private GUI variables
+    QLabel *segments=nullptr;         //!< Label to show segment count.
+    QPushButton *pb_show_best=nullptr;//!< Show the best collection according to showBestCollection().
     QGroupBox *g_collection=nullptr;  //!< Group box containing collection related elements.
     QGroupBox *g_step=nullptr;        //!< Group box containing step related elements.
     QSlider *s_collection=nullptr;    //!< Slider to specify which collection index to show.

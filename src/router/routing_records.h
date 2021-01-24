@@ -20,8 +20,6 @@ namespace rt {
 
     //! Convenient index operator to access a step grid.
     sp::Grid *operator[](int i) {return step_grids.value(i);}
-
-    QString desc;                 //!< Description of this attempt.
     QList<sp::Grid*> step_grids;  //!< A list of grids containing every step in the solve attempt
   };
 
@@ -30,7 +28,7 @@ namespace rt {
   {
 
     //! Clear the collection
-    void clear() {desc = ""; solve_steps.clear();}
+    void clear() {solve_steps.clear();}
 
     //! Convenient index operator to access a particular collection of SolveSteps
     SolveSteps operator[](int i) {return solve_steps.value(i);}
@@ -41,8 +39,6 @@ namespace rt {
       solve_steps.append(SolveSteps());
       return &solve_steps.back();
     }
-    
-    QString desc;                   //!< Description of this collection.
     QList<SolveSteps> solve_steps;  //!< A list of solve steps.
   };
 

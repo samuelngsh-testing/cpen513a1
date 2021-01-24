@@ -45,6 +45,8 @@ class RouterTests : public QObject
       // a minimal problem for testing
       // Looks like:
       // P         P
+      // TODO change to three rows and put the right pin low
+      // TODO add pin set with the three row version
       // (9 blank spaces)
       Problem problem(":/test_problems/straight_line.infile");
       QCOMPARE(problem.isValid(), true);
@@ -87,7 +89,9 @@ class RouterTests : public QObject
     // TODO
     void testProblemRoute()
     {
-
+      // TODO for the routable 2 row problem, check that each column contains 
+      // at least 1 conductor. At least one of those columns must contain two
+      // conductors (pins also count)
     }
 
 

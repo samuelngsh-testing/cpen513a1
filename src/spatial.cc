@@ -52,6 +52,8 @@ Grid::Grid(int dim_x, int dim_y, const QList<Coord> &obs_coords,
 
 Grid::Grid(Grid *other)
 {
+  copyState(other);
+  /* TODO remove
   int dim_x = other->cell_grid.size();
   int dim_y = other->cell_grid[0].size();
   cell_grid.resize(dim_x);
@@ -61,6 +63,7 @@ Grid::Grid(Grid *other)
       cell_grid[i][j] = new Cell(*(other->cellAt(Coord(i,j))));
     }
   }
+  */
 }
 
 Grid::~Grid()
@@ -204,6 +207,50 @@ bool Grid::routeExistsBetweenPins(const Coord &a, const Coord &b,
   return findB(a);
 }
 
+QList<Coord> Grid::connectedPins(const Coord &coord)
+{
+  // if the provided coordinate corresponds to an obstruction or a blank cell,
+  // return a blank list
+  if (cellAt(coord)->getType() == ObsCell || cellAt(coord)->getType() == BlankCell) {
+    return {};
+  }
+
+  // helper containers and vars for finding pins
+  QList<Coord> pins_found;
+  QSet<Coord> visited;
+  int pin_set_id = cellAt(coord)->pinSetId();
+  
+  std::function<void(const Coord &)> findConnectedPins;
+  findConnectedPins = [this, &pins_found, &visited, &pin_set_id, &findConnectedPins]
+    (const Coord &curr_coord)
+  {
+    if (visited.contains(curr_coord)) {
+      return;
+    }
+    // evaluate whether this is a valid pin
+    Cell *cell = cellAt(curr_coord);
+    if (cell->getType() == PinCell && cell->pinSetId() == pin_set_id) {
+      pins_found.append(curr_coord);
+    } else if (cell->getType() == BlankCell || cell->getType() == ObsCell
+        || (cell->pinSetId() > -1 && cell->pinSetId() != pin_set_id)) {
+      // don't further explore blank or obstruction cells
+      return;
+    }
+    visited.insert(curr_coord);
+    // recurse into neighbors
+    QList<Coord> ncoords = neighborCoordsOf(curr_coord);
+    for (const Coord &ncoord : ncoords) {
+      if (!visited.contains(ncoord)) {
+        findConnectedPins(ncoord);
+      }
+    }
+  };
+
+  findConnectedPins(coord);
+
+  return pins_found;
+}
+
 bool Grid::allPinsRouted()
 {
   for (PinSet pin_set : pin_sets) {
@@ -214,6 +261,42 @@ bool Grid::allPinsRouted()
     }
   }
   return true;
+}
+
+int Grid::countSegments()
+{
+  int segments=0;
+  QSet<Coord> visited;
+
+  for (const PinSet &pin_set : pin_sets.values()) {
+    for (const Coord &pin : pin_set) {
+      if (!visited.contains(pin)) {
+        QList<Coord> cpins = connectedPins(pin);
+        segments += std::max(cpins.size()-1, 0);
+        for (const Coord &cpin : cpins) {
+          visited.insert(cpin);
+        }
+      }
+    }
+  }
+
+  return segments;
+}
+
+int Grid::countCells(const QSet<CellType> &types)
+{
+  if (types.isEmpty()) {
+    return dim_x * dim_y;
+  }
+  int t_count = 0;
+  for (QVector<Cell*> cells : cell_grid) {
+    for (Cell *cell : cells) {
+      if (types.contains(cell->getType())) {
+        t_count++;
+      }
+    }
+  }
+  return t_count;
 }
 
 void Grid::clearGrid()

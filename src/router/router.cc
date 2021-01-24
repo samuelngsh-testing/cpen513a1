@@ -219,6 +219,9 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
   sp::Grid *cell_grid_cp = new sp::Grid();  // keep a copy of the cell grid
   cell_grid_cp->copyState(cell_grid);
   auto map_pin_sets_cp = map_pin_sets;
+  if (records != nullptr) {
+    records->newSolveSteps();
+  }
   // TODO remove QQueue<sp::PinPair> successful_routes;
   // TODO following implementation only contains one attempt pass. Proper 
   // implementation needs multiple passes
@@ -249,9 +252,6 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
       createConnection(pin_pair, route, (*cell_grid)(source_coord)->pinSetId(),
           cell_grid, records);
     } else {
-      if (records != nullptr) {
-        records->newSolveSteps();
-      }
       //qDebug() << tr("No existing route between %1 and %2").arg(source_coord.str()).arg(sink_coord.str());
       //success = routeForId(AStar, {pin_pair.first, pin_pair.second}, cell_grid, solve_col);
       success = false;
@@ -277,7 +277,6 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
           cell_grid->clearWorkingValues();
           sp::Grid grid_pre_rip;
           grid_pre_rip.copyState(cell_grid);
-          qDebug() << tr("Connections before: %1").arg(cell_grid->connMap()->size());
 
           // get the connections that need to be ripped to make this successful
           QList<sp::PinPair> pairs_to_reroute;
@@ -327,10 +326,8 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
             if (records != nullptr) {
               records->logCellGrid(cell_grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);
             }
-            qDebug() << tr("Connections after failure and restore: %1").arg(cell_grid->connMap()->size());
           } else {
             success = true;
-            qDebug() << tr("Connections after success: %1").arg(cell_grid->connMap()->size());
           }
         }
       } else {
@@ -368,6 +365,9 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
       failed_pins.clear();
       attempts_left--;
       qDebug() << tr("****No solution found, attempts left: %1****").arg(attempts_left);
+      if (attempts_left > 0 && records != nullptr) {
+        records->newSolveSteps();
+      }
     }
   }
 

@@ -24,16 +24,12 @@ RouteResult LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   RouteResult result;
 
   // run Lee Moore forward pass
-  qDebug() << QObject::tr("Running Lee-Moore from %1 to %2")
-    .arg(source_coord.str()).arg(sink_coord.str());
   bool success = runLeeMoore(source_coord, sink_coord, grid, pin_set_id, 
       termination, result.route_coords, result.requires_rip, record_keeper);
 
   if (success) {
     runBacktrace(termination, source_coord, sink_coord, grid, pin_set_id, 
         result.route_coords, record_keeper);
-  } else {
-    qDebug() << QObject::tr("Failed to run Lee-Moore on pin set %1").arg(pin_set_id);
   }
   if (record_keeper != nullptr) {
     record_keeper->logCellGrid(grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);

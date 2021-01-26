@@ -62,8 +62,6 @@ void RouteInspector::showBestCollection()
     int t_routed_cells = last_grid->countCells({sp::RoutedCell});
     if (col_ind == -1 || t_segments > segments || 
         (t_segments == segments && t_routed_cells < routed_cells)) {
-      qDebug() << tr("Old ind=%1, old segments=%2, old routed_cells=%3").arg(col_ind).arg(segments).arg(routed_cells);
-      qDebug() << tr("New ind=%1, new segments=%2, new routed_cells=%3").arg(i).arg(t_segments).arg(t_routed_cells);
       col_ind = i;
       segments = t_segments;
       routed_cells = t_routed_cells;

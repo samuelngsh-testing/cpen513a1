@@ -25,6 +25,7 @@ namespace rt {
     AvailAlg use_alg=AStar;             //!< routing algorithm to use
     bool routed_cells_lower_cost=false; //!< existing routes have lower traverse cost
     bool net_reordering=true;           //!< enable net reordering
+    int difficult_boost_thresh=2;       //!< boost the order of a difficult route after failing this many times
     int max_rerun_count=5;              //!< maximum global reroute count (with net reordering)
     bool rip_and_reroute=true;          //!< enable rip and reroute
     int rip_and_rerout_count=2;         //!< maximum rip and reroute attempts for a route
@@ -51,11 +52,6 @@ namespace rt {
     //! Return a pointer to the current record keeping helper class.
     RoutingRecords *recordKeeper() {return records;}
 
-    //! Attempt to route everything. Returns whether all have been successfully
-    //! routed.
-    bool routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
-        SolveCollection *solve_col);
-
     //! Attempt to route with rip and reroute (TODO after everything is settled,
     //! put rip and reroute and net reordering as configurable settings)
     bool routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
@@ -81,6 +77,16 @@ namespace rt {
         RoutingRecords *record_keeper=nullptr);
 
   private:
+
+    //! Prepare variables before routing.
+    void routePrep(const QList<sp::PinSet> &pin_sets, 
+        QMultiMap<int,sp::PinPair> &map_pin_sets, QSet<sp::Coord> &unrouted_pins,
+        RoutingAlg **alg);
+
+    //! Go through a routine that attempts to route the source to the sink.
+    //! If the route is only available by rip and reroute and if it is allowed,
+    //! attempt rip and reroute. Returns whether it is successful or not.
+    bool routePinPair(RoutingAlg *alg, const sp::PinPair &pin_pair, sp::Grid *grid);
 
     // Private variables
     RoutingRecords *records;  //!< class that keeps record of routing progress

@@ -52,9 +52,8 @@ namespace rt {
     //! Return a pointer to the current record keeping helper class.
     RoutingRecords *recordKeeper() {return records;}
 
-    //! Attempt to route with rip and reroute (TODO after everything is settled,
-    //! put rip and reroute and net reordering as configurable settings)
-    bool routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
+    //! Attempt to route with rip and reroute.
+    bool routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid, 
         bool *soft_halt, SolveCollection *solve_col);
 
     //! Create a routed connection with the provided list of coordinates and 

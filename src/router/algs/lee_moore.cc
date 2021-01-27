@@ -39,12 +39,6 @@ RouteResult LeeMooreAlg::findRoute(const sp::Coord &source_coord,
   if (clear_working_values) {
     grid->clearWorkingValues();
   }
-  /*
-     TODO remove
-  if (record_keeper != nullptr) {
-    record_keeper->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
-  }
-  */
 
   return result;
 }
@@ -107,11 +101,12 @@ bool LeeMooreAlg::runLeeMoore(const sp::Coord &source_coord,
     if (marked && record_keeper != nullptr) {
       record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
     }
-    if (neighbors.isEmpty() && !rip_phase) {
+    if (neighbors.isEmpty() && !rip_phase && attempt_rip) {
       // enter rip phase attempt
       rip_phase = true;
       grid->clearWorkingValues();
       neighbors.append(source_coord);
+      grid->cellAt(source_coord)->setWorkingValue(0);
     }
   }
   // reaching this point means that no solution was found
@@ -132,14 +127,6 @@ void LeeMooreAlg::runBacktrace(const sp::Coord &curr_coord,
         // back tracing complete
         return;
       } else if (nc->workingValue() >= 0 && nc->workingValue() < curr_working_val) {
-        /* TODO remove
-        // update cell type for chosen routed cells
-        nc->setType(sp::RoutedCell);
-        nc->setPinSetId(pin_set_id);
-        if (record_keeper != nullptr) {
-          record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
-        }
-        */
         route.append(nc->getCoord());
         // recurse until source reached
         runBacktrace(nc->getCoord(), source_coord, sink_coord, grid, pin_set_id,

@@ -53,17 +53,6 @@ Grid::Grid(int dim_x, int dim_y, const QList<Coord> &obs_coords,
 Grid::Grid(Grid *other)
 {
   copyState(other);
-  /* TODO remove
-  int dim_x = other->cell_grid.size();
-  int dim_y = other->cell_grid[0].size();
-  cell_grid.resize(dim_x);
-  for (int i=0; i<dim_x; i++) {
-    cell_grid[i].resize(dim_y);
-    for (int j=0; j<dim_y; j++) {
-      cell_grid[i][j] = new Cell(*(other->cellAt(Coord(i,j))));
-    }
-  }
-  */
 }
 
 Grid::~Grid()

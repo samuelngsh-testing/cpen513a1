@@ -39,11 +39,7 @@ void Invoker::runRoute()
     rt::RoutingRecords *record_keeper = router.recordKeeper();
     connect(record_keeper, &rt::RoutingRecords::routerStep,
         [this](sp::Grid *grid){viewer->updateCellGrid(grid); qApp->processEvents();});
-    /* TODO update to unify
     router.routeSuite(problem_cp.pinSets(), problem_cp.cellGrid(), 
-        inspector->solveCollection());
-        */
-    router.routeSuiteRipReroute(problem_cp.pinSets(), problem_cp.cellGrid(), 
         &soft_halt, inspector->solveCollection());
     inspector->updateCollections();
   } else {

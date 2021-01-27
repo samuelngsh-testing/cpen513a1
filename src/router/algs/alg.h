@@ -43,14 +43,6 @@ namespace rt {
         QList<sp::Connection*> *rip_blacklist=nullptr,
         RoutingRecords *record_keeper=nullptr) = 0;
 
-    /* TODO remove
-    //! Attempt to find a route but allowing potential ripping.
-    QList<sp::Coord> findRouteAllowRip(const sp::Coord &source_coord,
-        const sp::Coord &sink_coord, sp::Grid *grid, bool routed_cells_lower_cost,
-        QList<sp::Connection*> rip_blacklist, bool clear_working_values=true,
-        RoutingRecords *record_keeper=nullptr);
-        */
-
   };
 
 }

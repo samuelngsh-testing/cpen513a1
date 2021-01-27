@@ -44,8 +44,6 @@ QRectF Cell::boundingRect() const
 
 void Cell::paint(QPainter *painter, const QStyleOptionGraphicsItem *, QWidget *)
 {
-  // TODO this has to change later. Pins alone might have multiple possible
-  // colors.
   switch(type) {
     case sp::PinCell:
     case sp::RoutedCell:

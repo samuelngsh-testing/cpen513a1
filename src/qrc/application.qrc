@@ -14,7 +14,7 @@
     <file>sample_problems/temp.infile</file>
     <file>sample_problems/wavy.infile</file>
     <!--test files-->
-    <file>test_problems/straight_line.infile</file>
-    <file>test_problems/straight_line_w_obs.infile</file>
+    <file>test_problems/3_rows.infile</file>
+    <file>test_problems/3_rows_w_obs.infile</file>
 </qresource>
 </RCC>

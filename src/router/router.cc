@@ -20,7 +20,7 @@ Router::Router(const Problem &problem, RouterSettings settings)
   records = new RoutingRecords(settings.log_level, settings.gui_update_level);
 }
 
-bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
+bool Router::routeSuite(QList<sp::PinSet> pin_sets, sp::Grid *cell_grid,
     bool *soft_halt, SolveCollection *solve_col)
 {
   // prepare record keeping
@@ -70,94 +70,11 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
 
     // try to find a route
     bool success = routePinPair(alg, pin_pair, cell_grid);
-    /* TODO remove
-    bool success;
-    QList<sp::Coord> route;
-    if (cell_grid->routeExistsBetweenPins(source_coord, sink_coord, &route)) {
-      success = true;
-      createConnection(pin_pair, route, (*cell_grid)(source_coord)->pinSetId(),
-          cell_grid, records);
-    } else {
-      success = false;
-      QList<sp::Connection*> rip_cand;
-      QList<sp::Connection*> rip_blacklist;
-      RouteResult result;
-      result = alg->findRoute(source_coord, sink_coord, cell_grid, 
-          settings.routed_cells_lower_cost, false, settings.rip_and_reroute,
-          &rip_blacklist, records);
-      route = result.route_coords;
-      if (!route.isEmpty()) {
-        if (!result.requires_rip) {
-          // straightforward result that doesn't require ripping
-          success = true;
-          createConnection(pin_pair, route, (*cell_grid)(source_coord)->pinSetId(), 
-              cell_grid, records);
-          cell_grid->clearWorkingValues();
-          records->logCellGrid(cell_grid, LogResultsOnly, VisualizeResultsOnly);
-        } else if (settings.rip_and_reroute) {
-          // attempt rip and reroute
-          // save the cell grid before doing anything
-          cell_grid->clearWorkingValues();
-          sp::Grid grid_pre_rip;
-          grid_pre_rip.copyState(cell_grid);
-
-          // get the connections that need to be ripped to make this successful
-          QList<sp::PinPair> pairs_to_reroute;
-          QSet<sp::Connection*> conns = existingConnections(route, cell_grid, (*cell_grid)(source_coord)->pinSetId());
-          qDebug() << tr("Attempting rip and reroute with %1 routes to rip").arg(conns.count());
-          for (sp::Connection *conn : conns) {
-            pairs_to_reroute.append(conn->pinPair());
-            ripConnection(conn, cell_grid, records);
-            delete conn;
-            records->logCellGrid(cell_grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);
-          }
-
-          // create the new connection
-          createConnection(pin_pair, route, (*cell_grid)(source_coord)->pinSetId(),
-              cell_grid, records);
-
-          // reroute the ripped connections
-          bool all_rerouted = true;
-          for (const sp::PinPair &reroute_pair : pairs_to_reroute) {
-            RouteResult reroute_result;
-            reroute_result = alg->findRoute(reroute_pair.first, reroute_pair.second, 
-                cell_grid, settings.routed_cells_lower_cost, false, false,
-                &rip_blacklist, records);
-            if (!reroute_result.route_coords.isEmpty()) {
-              createConnection(reroute_pair, reroute_result.route_coords,
-                  (*cell_grid)(reroute_pair.first)->pinSetId(), cell_grid,
-                  records);
-              cell_grid->clearWorkingValues();
-              records->logCellGrid(cell_grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);
-            } else {
-              cell_grid->clearWorkingValues();
-              qDebug() << "Rip and reroute failed because one of the ripped "
-                  "routes cannot be rerouted.";
-              all_rerouted = false;
-              break;
-            }
-          }
-
-          // revert if not all ripped connections can be rerouted
-          if (!all_rerouted) {
-            qDebug() << "Reverting to state prior to rerouting";
-            cell_grid->copyState(&grid_pre_rip);
-            records->logCellGrid(cell_grid, LogCoarseIntermediate, VisualizeCoarseIntermediate);
-          } else {
-            success = true;
-          }
-        }
-      } else {
-        cell_grid->clearWorkingValues();
-        records->logCellGrid(cell_grid, LogResultsOnly, VisualizeResultsOnly);
-      }
-    }
-    */
 
     // route failure remedies
     if (!success) {
       if (!failed_pins.contains(source_coord) && !failed_pins.contains(sink_coord)) {
-        difficult_pair_failure_count[pin_pair] += 1;
+        difficult_pair_failure_count[pin_pair]++;
         if (!difficult_pairs.contains(pin_pair)) {
           // every time a new failure emerges, put them as top priority for the next round
           difficult_pairs.prepend(pin_pair);
@@ -167,8 +84,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
           difficult_pairs.prepend(pin_pair);
           difficult_pair_failure_count[pin_pair] = 0;
         }
-        failed_pins.insert(source_coord);
-        failed_pins.insert(sink_coord);
+        failed_pins += {source_coord, sink_coord};
       }
     }
 
@@ -181,6 +97,7 @@ bool Router::routeSuiteRipReroute(QList<sp::PinSet> pin_sets, sp::Grid *cell_gri
       for (auto difficult_pair : difficult_pairs) {
         priority_routes.enqueue(difficult_pair);
       }
+      // restore backups and clear flags
       cell_grid->copyState(cell_grid_cp);
       map_pin_sets = map_pin_sets_cp;
       failed_pins.clear();
@@ -326,8 +243,6 @@ bool Router::routePinPair(RoutingAlg *alg, const sp::PinPair &pin_pair,
     success = true;
     createConnection(pin_pair, result.route_coords, (*grid)(source_coord)->pinSetId(),
         grid, records);
-    grid->clearWorkingValues();
-    records->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
   } else if (settings.rip_and_reroute) {
     // attempt rip and reroute
     int rip_attempts_left = settings.rip_and_rerout_count;
@@ -375,6 +290,8 @@ bool Router::routePinPair(RoutingAlg *alg, const sp::PinPair &pin_pair,
         }
       }
 
+      rip_attempts_left--;
+
       // revert if not all ripped connections can be rerouted
       // add ripped connections to blacklist, if there is quota for reattempt
       // then these routes won't be reused
@@ -386,19 +303,20 @@ bool Router::routePinPair(RoutingAlg *alg, const sp::PinPair &pin_pair,
               all_routed_coords.toList(), grid, (*grid)(source_coord)->pinSetId()));
 
         // rerun the routing with the new blacklist
-        result = alg->findRoute(source_coord, sink_coord, grid,
-            settings.routed_cells_lower_cost, false, settings.rip_and_reroute,
-            &rip_blacklist, records);
+        if (rip_attempts_left > 0) {
+          result = alg->findRoute(source_coord, sink_coord, grid,
+              settings.routed_cells_lower_cost, false, settings.rip_and_reroute,
+              &rip_blacklist, records);
+        }
       } else {
         success = true;
       }
-
-      rip_attempts_left--;
     }
-  } else {
-    grid->clearWorkingValues();
-    records->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
   }
+
+  grid->clearWorkingValues();
+  records->logCellGrid(grid, LogResultsOnly, VisualizeResultsOnly);
+
 
   return success;
 }

@@ -19,7 +19,7 @@ enable_testing()
 qt5_add_resources(CUSTOM_RSC qrc/application.qrc)
 
 # source and header files
-set(BIN_SOURCES
+set(LIB_SOURCES
     spatial.cc
     gui/mainwindow.cc
     gui/viewer.cc
@@ -34,7 +34,7 @@ set(BIN_SOURCES
     router/algs/a_star.cc
     router/algs/lee_moore.cc
     )
-set(BIN_HEADERS
+set(LIB_HEADERS
     spatial.h
     gui/mainwindow.h
     gui/viewer.h
@@ -60,13 +60,17 @@ set(LIB_LINKS
 # inclusions
 include_directories(.)
 
+# build application library (shared by application and unit tests)
+add_library(pinrouter_lib OBJECT ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
+target_link_libraries(pinrouter_lib PUBLIC ${LIB_LINKS})
+
 # build application
-add_executable(pinrouter main.cc ${BIN_SOURCES} ${BIN_HEADERS} ${CUSTOM_RSC})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${LIB_LINKS})
+add_executable(pinrouter main.cc)
+target_link_libraries(${PROJECT_NAME} PUBLIC pinrouter_lib)
 
 # build unit tests
-add_executable(pinrouter_tests tests/pinrouter_tests.cpp ${BIN_SOURCES} ${BIN_HEADERS} ${CUSTOM_RSC})
-target_link_libraries(pinrouter_tests Qt5::Test ${LIB_LINKS})
+add_executable(pinrouter_tests tests/pinrouter_tests.cpp)
+target_link_libraries(pinrouter_tests pinrouter_lib Qt5::Test)
 add_test(pinrouter_tests pinrouter_tests)
 set_tests_properties(pinrouter_tests PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
 add_custom_command(TARGET pinrouter_tests

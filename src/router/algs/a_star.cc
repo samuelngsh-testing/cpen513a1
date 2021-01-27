@@ -180,23 +180,6 @@ void AStarAlg::runBacktrace(const sp::Coord &curr_coord, const sp::Coord &source
     sp::Coord from_coord = from_coord_v.value<sp::Coord>();
     route.append(from_coord);
     
-    /* TODO delete
-    sp::Cell *from_cell = grid->cellAt(from_coord);
-    if (from_cell->getType() != sp::PinCell) {
-      from_cell->setType(sp::RoutedCell);
-      from_cell->setPinSetId(pin_set_id);
-    }
-    */
-    // TODO delete
-    //if (grid->routeExistsBetweenPins(from_coord, source_coord)) {
-    //  // backtracing ends early because connect is already made
-    //  return;
-    //}
-    /* TODO delete
-    if (record_keeper != nullptr) {
-      record_keeper->logCellGrid(grid, LogAllIntermediate, VisualizeAllIntermediate);
-    }
-    */
     runBacktrace(from_coord, source_coord, grid, pin_set_id, route, record_keeper);
   }
 }

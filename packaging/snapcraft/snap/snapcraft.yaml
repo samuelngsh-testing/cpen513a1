@@ -1,0 +1,29 @@
+name: pinrouter
+base: core18
+version: '0.0.1'
+summary: A pin router by Samuel Ng developed for the course CPEN513.
+description: A pin router by Samuel Ng developed for the course CPEN513.
+grade: devel
+confinement: strict
+
+apps:
+  pinrouter:
+    extensions:
+      - kde-neon  # provides necessary Qt5 dependencies and sets up the desktop env
+    command: bin/pinrouter
+    plugs: [unity7, x11, home]
+
+parts:
+  pinrouter:
+    source: https://github.com/samuelngsh-testing/cpen513a1.git
+    source-type: git
+    source-branch: main
+    plugin: cmake
+    build-packages: [make,gcc,g++,qtchooser,qt5-default,libqt5svg5-dev,qttools5-dev,qttools5-dev-tools]
+    configflags: [-DCMAKE_BUILD_TYPE=Release, -DCMAKE_INSTALL_PREFIX=/bin]
+    stage-packages:
+      - libqt5core5a
+      - libqt5gui5
+      - libqt5svg5
+      - libqt5widgets5
+      - libx11-6

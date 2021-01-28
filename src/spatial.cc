@@ -158,7 +158,10 @@ bool Grid::routeExistsBetweenPins(const Coord &a, const Coord &b,
     QList<sp::Coord> *route)
 {
   int pin_set_id = cellAt(a)->pinSetId();
-  assert(cellAt(b)->pinSetId() == pin_set_id);
+  if (cellAt(b)->pinSetId() != pin_set_id) {
+    qFatal("routeExistsBetweenPins called on two coordinates that don't belong "
+        "to the same wire.");
+  }
 
   // operate on a copy of the grid
   Grid grid_cp(this);

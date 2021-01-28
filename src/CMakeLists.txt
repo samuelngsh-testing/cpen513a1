@@ -63,18 +63,27 @@ set(LIB_LINKS
 include_directories(.)
 
 # build application library (shared by application and unit tests)
-add_library(pinrouter_lib OBJECT ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
-target_link_libraries(pinrouter_lib PUBLIC ${LIB_LINKS})
+# NOTE the library method only works on CMake 3.12 or above. Reverting to building
+#      the program and unit tests twice for compatibility reasons
+#add_library(pinrouter_lib OBJECT ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
+#target_link_libraries(pinrouter_lib PUBLIC ${LIB_LINKS})
 
 # build application
-add_executable(pinrouter main.cc)
-target_link_libraries(${PROJECT_NAME} PUBLIC pinrouter_lib)
+add_executable(pinrouter main.cc ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${LIB_LINKS})
+#add_executable(pinrouter main.cc)
+#target_link_libraries(${PROJECT_NAME} PUBLIC pinrouter_lib)
 
 # build unit tests
-add_executable(pinrouter_tests tests/pinrouter_tests.cpp)
-target_link_libraries(pinrouter_tests pinrouter_lib Qt5::Test)
+add_executable(pinrouter_tests tests/pinrouter_tests.cpp ${LIB_SOURCES} ${LIB_HEADERS} ${CUSTOM_RSC})
+target_link_libraries(pinrouter_tests Qt5::Test ${LIB_LINKS})
+#add_executable(pinrouter_tests tests/pinrouter_tests.cpp)
+#target_link_libraries(pinrouter_tests pinrouter_lib Qt5::Test)
 add_test(pinrouter_tests pinrouter_tests)
 set_tests_properties(pinrouter_tests PROPERTIES ENVIRONMENT QT_QPA_PLATFORM=offscreen)
 add_custom_command(TARGET pinrouter_tests
     POST_BUILD
     COMMAND ctest -C $<CONFIGURATION> --output-on-failure)
+
+# install the binary
+install(TARGETS pinrouter RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}")

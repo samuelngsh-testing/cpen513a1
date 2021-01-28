@@ -5,6 +5,7 @@
 //
 // @desc:     Implementation of the MainWindow class.
 
+#include <QSvgGenerator>
 #include "mainwindow.h"
 #include "router/router.h"
 
@@ -47,6 +48,26 @@ void MainWindow::readAndShowProblem(const QString &in_path)
   open_dir_path = QFileInfo(in_path).absolutePath();
 }
 
+void MainWindow::takeScreenshot() const
+{
+  QFileDialog fd;
+  QString svg_path = fd.getSaveFileName(this->parentWidget(), tr("Save svg to..."),
+      "screenshot.svg");
+  if (svg_path.isEmpty()) {
+    return;
+  }
+  QRectF target = viewer->sceneRect();
+
+  QSvgGenerator gen;
+  gen.setFileName(svg_path);
+  gen.setViewBox(target);
+
+  QPainter painter;
+  painter.begin(&gen);
+  viewer->render(&painter, target);
+  painter.end();
+}
+
 void MainWindow::initGui()
 {
   initMenuBar();
@@ -72,6 +93,7 @@ void MainWindow::initMenuBar()
 {
   // initialize menus
   QMenu *file = menuBar()->addMenu(tr("&File"));
+  QMenu *tools = menuBar()->addMenu(tr("&Tools"));
   QMenu *help = menuBar()->addMenu(tr("&Help"));
 
   // file menu actions
@@ -93,6 +115,9 @@ void MainWindow::initMenuBar()
         });
   }
 
+  // tools menu actions
+  QAction *screenshot = new QAction(tr("&Screenshot"));
+
   // help menu actions
   QAction *about = new QAction(tr("&About"));
 
@@ -113,6 +138,7 @@ void MainWindow::initMenuBar()
         }
       });
   connect(quit, &QAction::triggered, this, &QWidget::close);
+  connect(screenshot, &QAction::triggered, this, &MainWindow::takeScreenshot);
   connect(about, &QAction::triggered, this, &MainWindow::aboutDialog);
 
   // add actions to the appropriate menus
@@ -120,5 +146,6 @@ void MainWindow::initMenuBar()
   file->addMenu(open_sample_problem);
   file->addSeparator();
   file->addAction(quit);
+  tools->addAction(screenshot);
   help->addAction(about);
 }

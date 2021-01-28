@@ -7,6 +7,7 @@ set(QT_VERSION_REQ "5.2")
 find_package(Qt5Core ${QT_VERSION_REQ} REQUIRED)
 find_package(Qt5Gui ${QT_VERSION_REQ} REQUIRED)
 find_package(Qt5Widgets ${QT_VERSION_REQ} REQUIRED)
+find_package(Qt5Svg ${QT_VERSION_REQ} REQUIRED)
 find_package(Qt5Test ${QT_VERSION_REQ} REQUIRED)
 
 # general settings
@@ -55,6 +56,7 @@ set(LIB_LINKS
     Qt5::Core
     Qt5::Gui
     Qt5::Widgets
+    Qt5::Svg
     )
 
 # inclusions

@@ -41,6 +41,9 @@ namespace gui {
     //! Read a problem file and show it in the viewer.
     void readAndShowProblem(const QString &in_path);
 
+    //! Take a screenshot of the viewer and output to SVG.
+    void takeScreenshot() const;
+
   private:
 
     //! Initialize the GUI.

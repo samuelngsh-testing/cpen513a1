@@ -6,7 +6,21 @@ If you wish to compile the docs, run `doxygen Doxygen` in the `src` directory (w
 
 # Running the Routing Program
 
-## Install and Run the Packaged Snap
+## macOS
+
+A bundled binary is included with the assignment submission with the name `pinrouter.app`. It should be supported by macOS 14 and above (tested on macOS 14 and 15).
+
+If compiling from source is desired, CMake and Qt5 are required. The simplest way to acquire `qt` seems to be from the [Homebrew package manager](https://brew.sh). Once you have brew installed, type:
+
+```
+brew install cmake qt
+```
+
+With the prerequisites installed, the rest of the steps are identical to the Ubuntu compilation steps starting from the `git clone` line which you can find below.
+
+## Ubuntu
+
+### Install and Run the Packaged Snap
 
 Running the packaged Snap version of the program is possible if you're running on a modern Ubuntu host. A packaged Snap is included in the root directory of the assignment archive after extraction. In a terminal, change to the extracted root, `pinrouter_0.0.1_amd64.snap` should be present. Install the snap:
 ```
@@ -24,8 +38,7 @@ sudo snap remove pinrouter
 ```
 
 
-## Compile from Source
-
+### Compile from Source
 
 Note: these instructions should also work on a WSL installation of Ubuntu 18.04 LTS or 20.04 LTS on Windows 10, assuming that you have a viable X11 server such as Xming.
 
